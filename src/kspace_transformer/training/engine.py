@@ -229,6 +229,9 @@ class Trainer:
                 step=valid_result.epoch,
             )
 
+    def log_epoch_metrics(self, train_result: EpochResult, valid_result: EpochResult | None) -> None:
+        self._log_epoch_metrics(train_result, valid_result)
+
     def fit(
         self,
         *,

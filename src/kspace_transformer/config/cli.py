@@ -83,6 +83,10 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument("--clear_memory", type=str2bool, default=defaults.runtime.clear_memory)
     parser.add_argument("--test_first_epoch", type=str2bool, default=defaults.runtime.test_first_epoch)
+    parser.add_argument("--eval_interval_lr", type=int, default=defaults.eval.eval_interval_lr)
+    parser.add_argument("--eval_interval_k", type=int, default=defaults.eval.eval_interval_k)
+    parser.add_argument("--eval_interval_rm", type=int, default=defaults.eval.eval_interval_rm)
+    parser.add_argument("--num_workers", type=int, default=0)
 
     parser.add_argument("--train_hr_data_path", type=str, default=None)
     parser.add_argument("--train_lr_data_path", type=str, default=None)
@@ -98,6 +102,11 @@ def add_test_args(parser: argparse.ArgumentParser) -> None:
     _add_model_args(parser, defaults)
     parser.add_argument("--batch_size", type=int, default=defaults.data.valid_batch_size)
     parser.add_argument("--lr_size", type=int, default=defaults.data.lr_size)
+    parser.add_argument("--max_seq_len", type=int, default=defaults.data.max_seq_len)
+    parser.add_argument("--num_workers", type=int, default=0)
+    parser.add_argument("--inference_stage", choices=["LR", "K", "RM"], default="RM")
+    parser.add_argument("--up_scale", type=int, default=2)
+    parser.add_argument("--save_summary_path", type=str, default=None)
     parser.add_argument("--test_hr_data_path", type=str, default=None)
     parser.add_argument("--test_lr_data_path", type=str, default=None)
     parser.add_argument("--test_mask_path", type=str, default=None)
@@ -106,11 +115,23 @@ def add_test_args(parser: argparse.ArgumentParser) -> None:
 def add_preprocess_args(parser: argparse.ArgumentParser) -> None:
     defaults = build_default_config()
     _add_common_runtime_args(parser, defaults)
+    parser.add_argument("--input_hr_kspace_path", type=str, required=True)
+    parser.add_argument("--output_lr_kspace_path", type=str, required=True)
+    parser.add_argument("--scale", type=int, default=2)
+    parser.add_argument("--batch_size", type=int, default=50)
 
 
 def add_split_args(parser: argparse.ArgumentParser) -> None:
     defaults = build_default_config()
     _add_common_runtime_args(parser, defaults)
+    parser.add_argument("--hr_kspace_path", type=str, required=True)
+    parser.add_argument("--lr_kspace_path", type=str, required=True)
+    parser.add_argument("--split_output_dir", type=str, required=True)
+    parser.add_argument("--train_ratio", type=float, default=0.7)
+    parser.add_argument("--valid_ratio", type=float, default=0.15)
+    parser.add_argument("--test_ratio", type=float, default=0.15)
+    parser.add_argument("--shuffle", type=str2bool, default=True)
+    parser.add_argument("--random_seed", type=int, default=42)
 
 
 def _get(namespace: argparse.Namespace, key: str, fallback: object) -> object:
