@@ -1,6 +1,4 @@
-# Deep-Learning-Model
-
-Ground up built implementation of a K-space Transformer pipeline for breast MRI optimization. The repository was built incrementally following a modular approach, with each subsystem designed as an independent component that can be tested, profiled, and improved in isolation.
+Implementation of a Transformer model operating within the k-space domain for breast MRI optimization. The repository was built incrementally following a modular approach, with each subsystem designed as an independent component that can be tested, profiled, and improved in isolation.
 
 ## 1. Project Objective
 
