@@ -4,9 +4,9 @@ from typing import Any
 
 import torch
 
-from kspace_transformer.training.metrics import MetricsAccumulator, compute_psnr, compute_ssim
-from kspace_transformer.training.stage import TrainingStage
-from kspace_transformer.utils.device import to_device
+from training.metrics import MetricsAccumulator, compute_psnr, compute_ssim
+from training.stage import TrainingStage
+from utils.device import to_device
 
 
 class InferenceRunner:
@@ -78,3 +78,4 @@ class InferenceRunner:
             "mean_ssim": acc.mean("ssim"),
             "num_samples": acc.counts.get("psnr", 0),
         }
+

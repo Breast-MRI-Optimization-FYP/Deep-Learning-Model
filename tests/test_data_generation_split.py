@@ -4,13 +4,13 @@ from pathlib import Path
 
 import numpy as np
 
-from kspace_transformer.data.lr_generation import generate_lr_kspace_batches
-from kspace_transformer.data.preprocess import (
+from data.lr_generation import generate_lr_kspace_batches
+from data.preprocess import (
     apply_variance_based_slice_selection,
     down_sample_i,
     normalize_image_slice,
 )
-from kspace_transformer.data.split import split_data_memory_efficient
+from data.split import split_data_memory_efficient
 
 
 def test_generate_lr_kspace_batches_shape(tmp_path: Path) -> None:
@@ -76,3 +76,4 @@ def test_preprocess_helpers() -> None:
     assert reduced.shape[0] == 8
     assert removed.shape[0] == 2
     assert kept.shape[0] == 8
+

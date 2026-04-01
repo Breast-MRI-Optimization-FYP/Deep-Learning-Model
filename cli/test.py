@@ -8,15 +8,16 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-from kspace_transformer.config.cli import add_test_args, parse_runtime_config
-from kspace_transformer.data.datasets import KSpaceCollator, TestKSpaceDataset
-from kspace_transformer.inference.engine import InferenceRunner
-from kspace_transformer.model import KSpaceTransformer
-from kspace_transformer.training.checkpoint import CheckpointManager
-from kspace_transformer.training.logger import RunLogger
-from kspace_transformer.training.stage import TrainingStage
-from kspace_transformer.utils.device import resolve_device
-from kspace_transformer.utils.seed import set_global_seed
+from config.cli import add_test_args, parse_runtime_config
+from data.datasets import KSpaceCollator, TestKSpaceDataset
+from inference.engine import InferenceRunner
+from model import KSpaceTransformer
+from training.checkpoint import CheckpointManager
+from training.logger import RunLogger
+from training.stage import TrainingStage
+from utils.device import resolve_device
+from utils.perf import RuntimeTracker
+from utils.seed import set_global_seed
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -75,6 +76,9 @@ def main_test(argv: Sequence[str] | None = None) -> int:
         raise ValueError("--num_workers must be >= 0")
 
     set_global_seed(config.runtime.seed, deterministic=True)
+    device = resolve_device(config.runtime.gpu)
+    runtime_tracker = RuntimeTracker(device=device)
+    runtime_tracker.start()
 
     collator = KSpaceCollator(max_seq_len=config.data.max_seq_len)
     dataset = TestKSpaceDataset(
@@ -94,7 +98,6 @@ def main_test(argv: Sequence[str] | None = None) -> int:
     )
 
     model = _build_model_from_config(config)
-    device = resolve_device(config.runtime.gpu)
 
     checkpoint_manager = CheckpointManager(Path(config.paths.output_dir) / "checkpoints")
     checkpoint = checkpoint_manager.load_checkpoint(checkpoint_path, map_location=device)
@@ -131,6 +134,8 @@ def main_test(argv: Sequence[str] | None = None) -> int:
         "mean_psnr": summary["mean_psnr"],
         "mean_ssim": summary["mean_ssim"],
         "num_samples": summary["num_samples"],
+        "runtime_seconds": runtime_tracker.elapsed_seconds(),
+        "peak_memory_bytes": runtime_tracker.peak_memory_bytes(),
     }
 
     summary_path_arg = getattr(args, "save_summary_path", None)
@@ -151,3 +156,4 @@ def main_test(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main_test())
+

@@ -87,6 +87,7 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--eval_interval_k", type=int, default=defaults.eval.eval_interval_k)
     parser.add_argument("--eval_interval_rm", type=int, default=defaults.eval.eval_interval_rm)
     parser.add_argument("--num_workers", type=int, default=0)
+    parser.add_argument("--save_summary_path", type=str, default=None)
 
     parser.add_argument("--train_hr_data_path", type=str, default=None)
     parser.add_argument("--train_lr_data_path", type=str, default=None)
@@ -119,6 +120,7 @@ def add_preprocess_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--output_lr_kspace_path", type=str, required=True)
     parser.add_argument("--scale", type=int, default=2)
     parser.add_argument("--batch_size", type=int, default=50)
+    parser.add_argument("--save_summary_path", type=str, default=None)
 
 
 def add_split_args(parser: argparse.ArgumentParser) -> None:
@@ -132,6 +134,7 @@ def add_split_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--test_ratio", type=float, default=0.15)
     parser.add_argument("--shuffle", type=str2bool, default=True)
     parser.add_argument("--random_seed", type=int, default=42)
+    parser.add_argument("--save_summary_path", type=str, default=None)
 
 
 def _get(namespace: argparse.Namespace, key: str, fallback: object) -> object:

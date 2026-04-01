@@ -5,10 +5,10 @@ from typing import Any
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from kspace_transformer.data.datasets import KSpaceCollator
-from kspace_transformer.training.engine import Trainer
-from kspace_transformer.training.losses import LossComputer
-from kspace_transformer.training.stage import StageScheduler, TrainingStage
+from data.datasets import KSpaceCollator
+from training.engine import Trainer
+from training.losses import LossComputer
+from training.stage import StageScheduler, TrainingStage
 
 
 class DummyDataset(Dataset):
@@ -133,3 +133,4 @@ def test_fit_respects_validation_guard() -> None:
     assert history[0]["valid"] is not None
     assert history[1]["valid"] is None
     assert history[2]["valid"] is None
+

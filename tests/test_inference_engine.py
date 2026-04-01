@@ -5,10 +5,10 @@ from typing import Any
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from kspace_transformer.data.datasets import KSpaceCollator
-from kspace_transformer.inference.engine import InferenceRunner
-from kspace_transformer.model import KSpaceTransformer
-from kspace_transformer.training.stage import TrainingStage
+from data.datasets import KSpaceCollator
+from inference.engine import InferenceRunner
+from model import KSpaceTransformer
+from training.stage import TrainingStage
 
 
 class _MiniDataset(Dataset):
@@ -80,3 +80,4 @@ def test_inference_runner_for_k_and_rm_stages() -> None:
     assert summary_rm["num_samples"] == 4
     assert torch.isfinite(torch.tensor(float(summary_k["mean_ssim"])))
     assert torch.isfinite(torch.tensor(float(summary_rm["mean_ssim"])))
+

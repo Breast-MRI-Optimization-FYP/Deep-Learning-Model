@@ -5,8 +5,8 @@ from collections.abc import Callable, Sequence
 import torch
 import torch.nn as nn
 
-from kspace_transformer.data.types import LossBreakdown
-from kspace_transformer.training.stage import TrainingStage
+from data.types import LossBreakdown
+from training.stage import TrainingStage
 
 TensorTransform = Callable[[torch.Tensor], torch.Tensor]
 
@@ -144,3 +144,4 @@ class LossComputer:
         )
         breakdown.validate(expected_hr_layers=len(hr_transformer_predictions))
         return breakdown
+

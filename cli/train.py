@@ -12,16 +12,17 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from kspace_transformer.config.cli import add_train_args, parse_runtime_config
-from kspace_transformer.data.datasets import KSpaceCollator, TrainKSpaceDataset, ValidKSpaceDataset
-from kspace_transformer.model import KSpaceTransformer
-from kspace_transformer.training.checkpoint import CheckpointManager
-from kspace_transformer.training.engine import Trainer
-from kspace_transformer.training.logger import RunLogger, TensorboardLogger
-from kspace_transformer.training.losses import LossComputer
-from kspace_transformer.training.stage import StageScheduler
-from kspace_transformer.utils.device import resolve_device
-from kspace_transformer.utils.seed import set_global_seed
+from config.cli import add_train_args, parse_runtime_config
+from data.datasets import KSpaceCollator, TrainKSpaceDataset, ValidKSpaceDataset
+from model import KSpaceTransformer
+from training.checkpoint import CheckpointManager
+from training.engine import Trainer
+from training.logger import RunLogger, TensorboardLogger
+from training.losses import LossComputer
+from training.stage import StageScheduler
+from utils.device import resolve_device
+from utils.perf import RuntimeTracker
+from utils.seed import set_global_seed
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -79,6 +80,9 @@ def main_train(argv: Sequence[str] | None = None) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     set_global_seed(config.runtime.seed, deterministic=True)
+    device = resolve_device(config.runtime.gpu)
+    runtime_tracker = RuntimeTracker(device=device)
+    runtime_tracker.start()
 
     collator = KSpaceCollator(max_seq_len=config.data.max_seq_len)
     train_dataset = TrainKSpaceDataset(
@@ -115,7 +119,6 @@ def main_train(argv: Sequence[str] | None = None) -> int:
     )
 
     model = _build_model_from_config(config)
-    device = resolve_device(config.runtime.gpu)
     if device.type == "cuda" and torch.cuda.device_count() > 1:
         run_logger.info(f"Using DataParallel across {torch.cuda.device_count()} CUDA devices")
         model = torch.nn.DataParallel(model)
@@ -157,6 +160,7 @@ def main_train(argv: Sequence[str] | None = None) -> int:
     checkpoint_manager = CheckpointManager(output_dir / "checkpoints")
     start_epoch = 1
     best_valid_psnr = float("-inf")
+    best_valid_ssim = float("-inf")
 
     if config.runtime.resume_train:
         if config.paths.checkpoint is None:
@@ -172,6 +176,7 @@ def main_train(argv: Sequence[str] | None = None) -> int:
 
         start_epoch = int(checkpoint.get("epoch", 0)) + 1
         best_valid_psnr = float(checkpoint.get("best_valid_psnr", best_valid_psnr))
+        best_valid_ssim = float(checkpoint.get("best_valid_ssim", best_valid_ssim))
         if best_valid_psnr != float("-inf"):
             checkpoint_manager.best_metric = best_valid_psnr
         run_logger.info(f"Resumed from checkpoint {config.paths.checkpoint} at epoch {start_epoch}")
@@ -197,6 +202,7 @@ def main_train(argv: Sequence[str] | None = None) -> int:
 
         if valid_result is not None:
             best_valid_psnr = max(best_valid_psnr, valid_result.psnr)
+            best_valid_ssim = max(best_valid_ssim, valid_result.ssim)
 
         serializable_state = {
             "epoch": epoch,
@@ -204,6 +210,7 @@ def main_train(argv: Sequence[str] | None = None) -> int:
             "optimizer_state_dict": optimizer.state_dict(),
             "lr_sch_state_dict": lr_scheduler.state_dict(),
             "best_valid_psnr": best_valid_psnr,
+            "best_valid_ssim": best_valid_ssim,
             "stage": train_result.stage.value,
             "train_metrics": {
                 "loss": train_result.loss,
@@ -262,9 +269,17 @@ def main_train(argv: Sequence[str] | None = None) -> int:
         "start_epoch": start_epoch,
         "end_epoch": history[-1]["epoch"] if history else start_epoch - 1,
         "best_valid_psnr": best_valid_psnr if math.isfinite(best_valid_psnr) else None,
+        "best_valid_ssim": best_valid_ssim if math.isfinite(best_valid_ssim) else None,
+        "runtime_seconds": runtime_tracker.elapsed_seconds(),
+        "peak_memory_bytes": runtime_tracker.peak_memory_bytes(),
         "history": history,
     }
-    summary_path = output_dir / "training_summary.json"
+    summary_path_arg = getattr(args, "save_summary_path", None)
+    if summary_path_arg:
+        summary_path = Path(summary_path_arg)
+    else:
+        summary_path = output_dir / "training_summary.json"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     run_logger.info(f"Training summary saved to {summary_path}")
 
@@ -273,3 +288,4 @@ def main_train(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main_train())
+

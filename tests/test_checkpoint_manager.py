@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from kspace_transformer.training.checkpoint import CheckpointManager
+from training.checkpoint import CheckpointManager
 
 
 def test_checkpoint_save_and_load_roundtrip(tmp_path: Path) -> None:
@@ -63,3 +63,4 @@ def test_load_model_state_non_strict_returns_incompatibilities(tmp_path: Path) -
     missing, unexpected = manager.load_model_state(model, checkpoint, strict=False)
     assert "bias" in missing
     assert unexpected == []
+

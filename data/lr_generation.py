@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from kspace_transformer.utils.fftc import fft2c, ifft2c
+from utils.fftc import fft2c, ifft2c
 
 from .preprocess import down_sample_i
 
@@ -60,3 +60,4 @@ def generate_lr_kspace_batches(
 
     del lr_k_data_mmap
     return output_path
+

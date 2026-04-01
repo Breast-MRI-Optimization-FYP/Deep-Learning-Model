@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import torch
 
-from kspace_transformer.model import KSpaceTransformer
-from kspace_transformer.model.positional_encoding import PositionalEncoding
+from model import KSpaceTransformer
+from model.positional_encoding import PositionalEncoding
 
 
 def _build_inputs(
@@ -122,3 +122,4 @@ def test_model_forward_k_and_rm_stages() -> None:
     )
     assert len(outputs_rm.hr_refined_images) == 2
     assert torch.isfinite(outputs_rm.hr_refined_images[-1]).all()
+

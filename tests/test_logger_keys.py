@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from kspace_transformer.training.logger import TensorboardLogger, build_metric_key
+from training.logger import TensorboardLogger, build_metric_key
 
 
 class _DummyWriter:
@@ -48,3 +48,4 @@ def test_tensorboard_logger_uses_distinct_metric_tags() -> None:
 def test_metric_key_requires_non_empty_components() -> None:
     with pytest.raises(ValueError):
         build_metric_key(split="", stage="K", family="metrics", metric="psnr")
+

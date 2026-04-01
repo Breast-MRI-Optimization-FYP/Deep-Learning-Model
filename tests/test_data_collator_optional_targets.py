@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from kspace_transformer.data.datasets import KSpaceCollator
+from data.datasets import KSpaceCollator
 
 
 def test_collator_handles_batches_without_lr_targets() -> None:
@@ -32,3 +32,4 @@ def test_collator_handles_batches_without_lr_targets() -> None:
     assert "LR_k_gt" not in batch
     assert batch["sampled_k"].shape == (2, 12, 2)
     assert batch["LR_pos_norm"].shape == (2, 16, 2)
+

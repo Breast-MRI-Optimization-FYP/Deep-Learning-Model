@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from kspace_transformer.data.types import BatchTensors, ForwardOutputs
+from data.types import BatchTensors, ForwardOutputs
 
 
 def assert_batch_shapes(batch: BatchTensors) -> None:
@@ -9,3 +9,4 @@ def assert_batch_shapes(batch: BatchTensors) -> None:
 
 def assert_model_output_shapes(outputs: ForwardOutputs) -> None:
     outputs.validate()
+

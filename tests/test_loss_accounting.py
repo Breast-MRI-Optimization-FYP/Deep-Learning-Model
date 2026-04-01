@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from kspace_transformer.training.losses import LossComputer
-from kspace_transformer.training.stage import TrainingStage
+from training.losses import LossComputer
+from training.stage import TrainingStage
 
 
 def test_lr_loss_vectors_are_independent() -> None:
@@ -76,3 +76,4 @@ def test_hr_rm_stage_emits_refinement_losses() -> None:
     assert breakdown.rm_img_losses[0] > 0
     assert breakdown.rm_k_losses[0] > 0
     assert float(breakdown.total_loss.item()) > 0
+

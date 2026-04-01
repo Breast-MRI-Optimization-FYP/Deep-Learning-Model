@@ -7,7 +7,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
-from kspace_transformer.utils.fftc import ifft2c
+from utils.fftc import ifft2c
 
 from .grids import build_lr_positions, build_normalized_grid
 from .masks import ensure_mask_channels, select_mask
@@ -272,3 +272,4 @@ class KSpaceCollator:
             result["LR_k_gt"] = torch.stack([item["LR_k_gt"] for item in batch])
 
         return result
+

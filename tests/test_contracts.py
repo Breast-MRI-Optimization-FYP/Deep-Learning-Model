@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from kspace_transformer.data.types import BatchTensors, ForwardOutputs, LossBreakdown, TokenizedSample
+from data.types import BatchTensors, ForwardOutputs, LossBreakdown, TokenizedSample
 
 
 def test_tokenized_sample_validation_passes() -> None:
@@ -71,3 +71,4 @@ def test_loss_breakdown_length_validation() -> None:
     )
     with pytest.raises(ValueError):
         breakdown.validate(expected_lr_layers=2, expected_hr_layers=4)
+

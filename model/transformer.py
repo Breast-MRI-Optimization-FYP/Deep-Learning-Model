@@ -6,8 +6,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from kspace_transformer.data.types import ForwardOutputs
-from kspace_transformer.utils.fftc import fft2c, ifft2c
+from data.types import ForwardOutputs
+from utils.fftc import fft2c, ifft2c
 
 from .blocks import CNNBlock, fill_in_k, gather_k_values
 from .layers import (
@@ -309,3 +309,4 @@ class KSpaceTransformer(nn.Module):
             hr_transformer_images=hr_transformer_outputs,
             hr_refined_images=hr_conv_outputs,
         )
+

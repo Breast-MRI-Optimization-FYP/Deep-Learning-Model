@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 from torch import nn
 
-from kspace_transformer.utils.fftc import fft2c, ifft2c
+from utils.fftc import fft2c, ifft2c
 
 
 def fill_in_k(
@@ -93,3 +93,4 @@ class CNNBlock(nn.Module):
         k_rec = data_consistency(k_rec, k_sampled, mask_unsampled)
         output = ifft2c(k_rec)
         return output
+

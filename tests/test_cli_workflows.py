@@ -4,10 +4,10 @@ from pathlib import Path
 
 import numpy as np
 
-from kspace_transformer.cli.preprocess import main_preprocess
-from kspace_transformer.cli.split import main_split
-from kspace_transformer.cli.test import main_test
-from kspace_transformer.cli.train import main_train
+from cli.preprocess import main_preprocess
+from cli.split import main_split
+from cli.test import main_test
+from cli.train import main_train
 
 
 def _write_small_dataset(root: Path) -> dict[str, Path]:
@@ -213,3 +213,4 @@ def test_train_and_test_cli_smoke(tmp_path: Path) -> None:
     )
     assert test_exit == 0
     assert summary_path.exists()
+

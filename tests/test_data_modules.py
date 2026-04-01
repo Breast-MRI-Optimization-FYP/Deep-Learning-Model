@@ -5,14 +5,14 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from kspace_transformer.data.datasets import (
+from data.datasets import (
     KSpaceCollator,
     TestKSpaceDataset,
     TrainKSpaceDataset,
 )
-from kspace_transformer.data.grids import build_lr_positions, build_normalized_grid
-from kspace_transformer.data.sequence import SequenceLimiter, TruncationStats
-from kspace_transformer.data.tokenize import tokenize_kspace_slice
+from data.grids import build_lr_positions, build_normalized_grid
+from data.sequence import SequenceLimiter, TruncationStats
+from data.tokenize import tokenize_kspace_slice
 
 
 def _write_dummy_data(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -109,3 +109,4 @@ def test_test_dataset_excludes_lr_targets(tmp_path: Path) -> None:
     assert "LR_i_gt" not in item
     assert "LR_k_gt" not in item
     assert item["LR_pos_norm"].shape == (16, 2)
+

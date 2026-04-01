@@ -4,8 +4,8 @@ from dataclasses import replace
 
 import pytest
 
-from kspace_transformer.config.defaults import build_default_config
-from kspace_transformer.config.schema import validate_runtime_config
+from config.defaults import build_default_config
+from config.schema import validate_runtime_config
 
 
 def test_default_config_is_valid() -> None:
@@ -43,3 +43,4 @@ def test_hr_weight_length_mismatch_raises() -> None:
     bad_cfg = replace(cfg, model=replace(cfg.model, num_hrdecoder_layers=5))
     with pytest.raises(ValueError):
         validate_runtime_config(bad_cfg)
+

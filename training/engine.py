@@ -6,9 +6,9 @@ from typing import Any
 import torch
 from torch.optim import Optimizer
 
-from kspace_transformer.data.types import ForwardOutputs
-from kspace_transformer.utils.device import to_device
-from kspace_transformer.utils.fftc import fft2c
+from data.types import ForwardOutputs
+from utils.device import to_device
+from utils.fftc import fft2c
 
 from .logger import TensorboardLogger
 from .losses import LossComputer
@@ -265,3 +265,4 @@ class Trainer:
             )
 
         return history
+

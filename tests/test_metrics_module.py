@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from kspace_transformer.training.metrics import (
+from training.metrics import (
     MetricsAccumulator,
     compute_psnr,
     compute_ssim,
@@ -47,3 +47,4 @@ def test_metrics_accumulator_mean_tracking() -> None:
     as_dict = acc.as_dict()
     assert as_dict["psnr"] == 10.0
     assert as_dict["ssim"] == 0.3
+

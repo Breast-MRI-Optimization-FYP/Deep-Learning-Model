@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from kspace_transformer.training.stage import StageScheduler, TrainingStage
+from training.stage import StageScheduler, TrainingStage
 
 
 def _build_scheduler() -> StageScheduler:
@@ -47,3 +47,4 @@ def test_invalid_stage_thresholds_raise() -> None:
             num_lr_layers=4,
             num_hr_layers=6,
         )
+
