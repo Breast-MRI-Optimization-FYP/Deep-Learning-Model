@@ -1,5 +1,19 @@
 Implementation of a Transformer model operating within the k-space domain for breast MRI optimization. The repository was built incrementally following a modular approach, with each subsystem designed as an independent component that can be tested, profiled, and improved in isolation.
 
+## Table of Contents
+
+- [1. Project Objective](#1-project-objective)
+- [2. Requirements](#2-requirements)
+- [3. Setup](#3-setup)
+- [4. Repository Architecture](#4-repository-architecture)
+- [5. Data Expectations](#5-data-expectations)
+- [6. Model Architecture](#6-model-architecture)
+- [7. Performance-Oriented Features](#7-performance-oriented-features)
+- [8. Command Line Workflows](#8-command-line-workflows)
+- [9. Reproducibility and Validation](#9-reproducibility-and-validation)
+- [10. Incremental Modular Build Strategy](#10-incremental-modular-build-strategy)
+- [11. Notes for Breast MRI Experiments](#11-notes-for-breast-mri-experiments)
+
 ## 1. Project Objective
 
 The primary objective is breast MRI optimization through high-fidelity reconstruction from undersampled k-space data. The system targets stable improvements in reconstruction quality (PSNR, SSIM) while maintaining practical runtime and memory behavior.
@@ -11,61 +25,51 @@ Research goals:
 - support reproducible staged training and evaluation,
 - provide measurable acceptance criteria for candidate model updates.
 
-## 2. Incremental Modular Build Strategy
+## 2. Requirements
 
-The repository is organized as modular research software. Data processing, model design, training control, inference, validation, and CLI orchestration are separated into dedicated modules. This structure supports:
+- Python `>=3.10,<3.14`
+- NumPy `>=2.1,<3.0`
+- PyTorch `>=2.2,<3.0`
+- h5py `>=3.10,<4.0`
+- scikit-image `>=0.22,<1.0`
+- TensorBoard `>=2.15,<3.0`
+- tqdm `>=4.66,<5.0`
 
-- rapid experimentation at subsystem boundaries,
-- unit and integration testing by module,
-- transparent benchmarking and parity checks,
-- easier adaptation to alternative breast MRI datasets and mask regimes.
+Optional development tools:
 
-## 3. Model Architecture
+- pytest, pytest-cov, ruff, mypy
 
-### 3.1 Input/Output Representation
+## 3. Setup
 
-- Complex-valued tensors are represented with two channels: `[..., 2]` for real/imaginary parts.
-- Frequency/image transforms use centered FFT/IFFT utilities.
-- Sampled and unsampled token streams are built from masked k-space coordinates.
+### 3.1 Environment
 
-### 3.2 Core Network Structure
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
 
-The model (`KSpaceTransformer`) combines:
+Windows PowerShell:
 
-1. Transformer encoder over sampled k-space tokens.
-2. LR decoder predicting low-resolution image-space outputs.
-3. HR decoder predicting unsampled high-resolution k-space/image outputs.
-4. CNN refinement blocks with data consistency in the RM stage.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
 
-The architecture includes positional encoding, multi-head attention, feed-forward transformer blocks, and stage-aware HR refinement.
+### 3.2 Installation
 
-### 3.3 Stage-Wise Learning Flow
+Runtime install:
 
-Training progresses through three stages:
+```bash
+python -m pip install -e .
+```
 
-- `LR`: low-resolution reconstruction learning,
-- `K`: high-resolution transformer prediction without refinement,
-- `RM`: transformer + CNN refinement with data consistency.
+Development install:
 
-Stage scheduling controls active losses, convolutional refinement weight, and evaluation interval per stage.
+```bash
+python -m pip install -e ".[dev]"
+```
 
-## 4. Performance-Oriented Features
-
-Implemented features that improve reconstruction quality, stability, or efficiency include:
-
-- stage-aware weighted loss computation for LR/HR/RM outputs,
-- strict runtime configuration and shape/data contract validation,
-- deterministic seeding for reproducibility,
-- adaptive mask reassignment during training,
-- sequence-length control for tokenized sampled/unsampled streams,
-- data-consistency enforcement in refinement blocks,
-- AdamW optimization with cosine learning-rate schedule,
-- checkpoint lifecycle (`last` and best-by-PSNR),
-- TensorBoard metric logging with collision-safe metric keys,
-- runtime and peak-memory telemetry in workflow summaries,
-- parity gate comparing baseline vs candidate runs with metric and resource thresholds.
-
-## 5. Repository Architecture
+## 4. Repository Architecture
 
 ```text
 .
@@ -82,15 +86,15 @@ Implemented features that improve reconstruction quality, stability, or efficien
 └── README.md
 ```
 
-## 6. Data Expectations
+## 5. Data Expectations
 
-### 6.1 Core Arrays
+### 5.1 Core Arrays
 
 - HR k-space array: shape `[N, H, W, 2]`, `float32`
 - LR k-space array: shape `[N, h, w, 2]`, `float32`
 - Mask bank: shape `[M, H, W]` or `[M, H, W, 2]`
 
-### 6.2 Split Outputs
+### 5.2 Split Outputs
 
 The split workflow writes:
 
@@ -98,51 +102,52 @@ The split workflow writes:
 - `train_lr_k.npy`, `valid_lr_k.npy`, `test_lr_k.npy`
 - `split_indices.npz`
 
-## 7. Requirements
+## 6. Model Architecture
 
-- Python `>=3.10,<3.14`
-- NumPy `>=2.1,<3.0`
-- PyTorch `>=2.2,<3.0`
-- h5py `>=3.10,<4.0`
-- scikit-image `>=0.22,<1.0`
-- TensorBoard `>=2.15,<3.0`
-- tqdm `>=4.66,<5.0`
+### 6.1 Input/Output Representation
 
-Optional development tools:
+- Complex-valued tensors are represented with two channels: `[..., 2]` for real/imaginary parts.
+- Frequency/image transforms use centered FFT/IFFT utilities.
+- Sampled and unsampled token streams are built from masked k-space coordinates.
 
-- pytest, pytest-cov, ruff, mypy
+### 6.2 Core Network Structure
 
-## 8. Setup
+The model (`KSpaceTransformer`) combines:
 
-### 8.1 Environment
+1. Transformer encoder over sampled k-space tokens.
+2. LR decoder predicting low-resolution image-space outputs.
+3. HR decoder predicting unsampled high-resolution k-space/image outputs.
+4. CNN refinement blocks with data consistency in the RM stage.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
+The architecture includes positional encoding, multi-head attention, feed-forward transformer blocks, and stage-aware HR refinement.
 
-Windows PowerShell:
+### 6.3 Stage-Wise Learning Flow
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+Training progresses through three stages:
 
-### 8.2 Installation
+- `LR`: low-resolution reconstruction learning,
+- `K`: high-resolution transformer prediction without refinement,
+- `RM`: transformer + CNN refinement with data consistency.
 
-Runtime install:
+Stage scheduling controls active losses, convolutional refinement weight, and evaluation interval per stage.
 
-```bash
-python -m pip install -e .
-```
+## 7. Performance-Oriented Features
 
-Development install:
+Implemented features that improve reconstruction quality, stability, or efficiency include:
 
-```bash
-python -m pip install -e ".[dev]"
-```
+- stage-aware weighted loss computation for LR/HR/RM outputs,
+- strict runtime configuration and shape/data contract validation,
+- deterministic seeding for reproducibility,
+- adaptive mask reassignment during training,
+- sequence-length control for tokenized sampled/unsampled streams,
+- data-consistency enforcement in refinement blocks,
+- AdamW optimization with cosine learning-rate schedule,
+- checkpoint lifecycle (`last` and best-by-PSNR),
+- TensorBoard metric logging with collision-safe metric keys,
+- runtime and peak-memory telemetry in workflow summaries,
+- parity gate comparing baseline vs candidate runs with metric and resource thresholds.
 
-## 9. Command Line Workflows
+## 8. Command Line Workflows
 
 Entrypoints:
 
@@ -152,7 +157,7 @@ Entrypoints:
 - `kst-test`
 - `kst-parity`
 
-### 9.1 Generate LR K-Space from HR K-Space
+### 8.1 Generate LR K-Space from HR K-Space
 
 ```bash
 kst-preprocess \
@@ -163,7 +168,7 @@ kst-preprocess \
 	--save_summary_path ./runs/preprocess_summary.json
 ```
 
-### 9.2 Deterministic Train/Validation/Test Split
+### 8.2 Deterministic Train/Validation/Test Split
 
 ```bash
 kst-split \
@@ -178,7 +183,7 @@ kst-split \
 	--save_summary_path ./runs/split_summary.json
 ```
 
-### 9.3 Train
+### 8.3 Train
 
 ```bash
 kst-train \
@@ -201,7 +206,7 @@ Primary artifacts under `--output_dir`:
 - `checkpoints/best_valid_psnr.pth`
 - `training_summary.json`
 
-### 9.4 Inference/Evaluation
+### 8.4 Inference/Evaluation
 
 ```bash
 kst-test \
@@ -213,7 +218,7 @@ kst-test \
 	--save_summary_path ./runs/exp01/inference_summary.json
 ```
 
-### 9.5 Parity Gate (Baseline vs Candidate)
+### 8.5 Parity Gate (Baseline vs Candidate)
 
 ```bash
 kst-parity \
@@ -233,7 +238,7 @@ Exit status semantics:
 - `0`: parity gate pass
 - `1`: parity gate fail
 
-## 10. Reproducibility and Validation
+## 9. Reproducibility and Validation
 
 - Deterministic seed configuration is enabled through runtime options.
 - Metric reporting includes PSNR and SSIM for training and evaluation.
@@ -245,6 +250,15 @@ Run tests:
 ```bash
 python -m pytest -q
 ```
+
+## 10. Incremental Modular Build Strategy
+
+The repository is organized as modular research software. Data processing, model design, training control, inference, validation, and CLI orchestration are separated into dedicated modules. This structure supports:
+
+- rapid experimentation at subsystem boundaries,
+- unit and integration testing by module,
+- transparent benchmarking and parity checks,
+- easier adaptation to alternative breast MRI datasets and mask regimes.
 
 ## 11. Notes for Breast MRI Experiments
 
