@@ -1,0 +1,917 @@
+﻿Progress Report
+A K-Space Deep Learning Model for Breast MRI Super-Resolution to Enhance Diagnostic Quality
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Team Members
+Weerasinghe M.S.S - 210690B Jayasinghe C.H - 210247B Jayasooriya J.M.D.C - 210252K
+Supervisors - Internal
+Dr. Charith Chitraranjan
+
+
+Supervisors - External
+Dr. Isuru Wijesinghe
+
+
+Table of Content
+
+
+1. Introduction        4
+1.1 Background & Motivation        4
+1.2 Problem Statement        5
+1.3 Research Objectives        6
+1.4 Scope of the Project        7
+2. Literature Review        7
+2.1 MRI Imaging and k-space Representation        9
+2.2 Undersampling in MRI and Its Effects        9
+2.3 Deep Learning in Medical Image Reconstruction        10
+2.3.1 Convolutional Neural Networks (CNNs)        11
+2.3.2 Generative Adversarial Networks (GANs)        12
+2.3.3 Vision Transformers (ViTs)        12
+2.3.4 Diffusion Models        12
+2.3.5 Hybrid Architectures        13
+2.4 Focus on Breast MRI Reconstruction from Undersampled 2D k-space        14
+2.5 Image-Domain Refinement Modules in Transformer-Based MRI Reconstruction        14
+2.6 Foundations for Hybrid Transformer-Based MRI Reconstruction        15
+2.6.1 Swin Transformer (SwinMR)        15
+2.6.2 T-HDDNet (Transformer-based Hierarchical Dynamic Decoder)        16
+2.6.3 Multi-scale Hierarchical Vision Transformer (MERIT + CASCADE)        16
+2.7 Research Gap        17
+2.7.1 Limited Breast-Specific Model Development        17
+2.7.2 Severe Data Scarcity and Dataset Limitations        19
+2.7.3 Lack of Hybrid Architecture Investigation        19
+2.7.4 Insufficient 2D k-space Focus        21
+3. Expected Outcomes        21
+4. Methodology        23
+4.1 Data Processing & Tokenization Pipeline        23
+4.2 Model Architecture: The K-Space Transformer        24
+5. Summary of Completed Works         26
+5.1 Implementation Specifics        26
+5.2 Data Preprocessing Pipeline        26
+5.2.1 Overview        26
+5.2.2 Stage 1: K-Space Data Extraction and Normalization        26
+5.2.3 Stage 2: Low-Resolution Data Generation        28
+5.2.4 Stage 3: Undersampling Mask Generation        29
+5.2.5 Stage 4: Dataset Partitioning        32
+5.2.6 Preprocessing Pipeline Summary        34
+5.2.7 Integration with K-Space Transformer        34
+5.3. Model Instantiation & Hyperparameters        35
+5.4 Hardware Specifications & Computational Resources        36
+5.5 Dual-Stage Training Strategy        36
+5.6 Deep Supervision & Dual-Domain Loss        37
+5.7 Training Performance        38
+5.8 Evaluation Framework        40
+5.8.1 Quantitative Analysis: PSNR and SSIM Performance        40
+5.8.2 Qualitative Assessment        42
+6. Future Improvements        42
+6.1 Implementation of Image Domain Refinement        42
+6.2 Architectural Adaptations for Breast MRI Heterogeneity        43
+4. Conclusion        45
+5. References        45
+
+
+
+
+
+
+Introduction
+Magnetic Resonance Imaging (MRI) provides high-resolution, radiation-free images with excellent soft-tissue contrast, making it a cornerstone of modern breast cancer diagnostics [1]. However, the lengthy scan times required for such detailed imaging often necessitate accelerated acquisition techniques like k-space undersampling. While these methods improve patient throughput, they can introduce aliasing artifacts and a loss of detail, potentially compromising diagnostic quality [2,3]. Traditional reconstruction approaches frequently struggle to recover the missing information, but recent advances in Deep Learning (DL) have shown significant promise in overcoming these challenges.
+This research leverages recent advancements in Transformer based architectures to address these challenges. Instead of relying on traditional Convolutional Neural Networks (CNNs), which are fundamentally limited in the frequency domain by local receptive fields and the assumption of translation invariance, this study has implemented a K-Space Transformer model specifically for breast MRI reconstruction. This approach moves beyond the limitations of regular grids by adopting an implicit neural representation of the k-space spectrogram. By treating spatial coordinates as continuous inputs, the model is able to learn the specific inductive bias of the frequency domain and capture global dependencies between distant frequency bins that are essential for accurate tissue reconstruction.
+To balance high fidelity reconstruction with the computational demands of global attention, the architecture utilized a hierarchical decoder structure. This involves a Low-Resolution (LR) decoder that reconstructs the fundamental anatomical structure of the breast tissue, followed by a High-Resolution (HR) decoder that fills in fine textures and lesion morphology.
+While the model training and initial evaluation phases have been completed, preliminary results indicate that the reconstruction quality is not yet optimal for clinical deployment. While the K-space Transformer effectively reduces significant aliasing artifacts, it lacks the iterative spatial corrections provided by the image domain. Consequently, this research serves as a validation of the Transformer’s superior ability to model k-space dependencies in breast MRI, while establishing a critical foundation for future work focused on optimizing results through the integration of image-domain refinement modules.
+
+
+   1. Background & Motivation
+Breast cancer remains the most prevalent cancer among women and the second leading cause of cancer related deaths globally [10]. Early detection is critical for effective intervention, and Magnetic Resonance Imaging (MRI) serves as a cornerstone for diagnosis, particularly for high risk patients or when other imaging modalities are inconclusive. However, the high resolution requirements for breast MRI necessitate long acquisition times, often leading to patient discomfort and a high susceptibility to motion artifacts. While accelerated acquisition via k-space undersampling can reduce scan times from nearly an hour to under 20 minutes [17,18], it introduces data sparsity that manifests as aliasing artifacts and a loss of diagnostic detail [11].
+Traditional reconstruction methods, such as Parallel Imaging and Compressed Sensing, are often limited by fixed mathematical priors and struggle under high acceleration factors. While Deep Learning (DL) has emerged as a powerful alternative, the majority of existing models, particularly Convolutional Neural Networks (CNNs) like U-Nets, are fundamentally designed for image domain processing. CNNs rely on local receptive fields and the assumption of translation invariance, which are suboptimal for k-space data. In MRI k-space, spatial information is distributed across spatial frequency components, and accurately modeling image structure requires capturing long-range dependencies across k-space. Standard grid-based CNNs, with their limited receptive fields, are not well-suited to modeling these global frequency-domain relationships.
+This research addressed this gap by implementing a K-Space Transformer framework tailored for breast MRI. By adopting an Implicit Neural Representation (INR), this study moved away from traditional discrete grids and instead treated the k-space spectrogram as a continuous function. This allowed the model to learn the specific inductive biases of the frequency domain through global attention mechanisms. Furthermore, to manage the computational complexity of breast MRI data, a hierarchical decoder structure was utilized, processing the data through low-resolution (LR) and high-resolution (HR) stages to recover both anatomical structure and fine texture details.
+The training and evaluation of this K-space Transformer model have been completed; however, the initial results indicate that the reconstruction performance is not yet optimal. While the model successfully demonstrates the ability to capture global dependencies and reduce aliasing compared to traditional methods, the absence of spatial-domain constraints has resulted in a performance ceiling. This sub-optimality highlights a critical technical need: while k-space learning is superior for frequency recovery, it requires the iterative correction of the image domain to achieve clinical grade fidelity.
+Therefore, the motivation of this study is twofold. First, it validates the implementation of a Transformer based architecture as a more robust alternative to CNNs for breast MRI k-space data. Second, it establishes that the current frequency only approach, while a significant advancement, serves as a foundation that must be optimized through future integration of image domain refinement. This research provides the necessary proof of concept for a transition toward hybrid k-space/image-domain models to ultimately enable faster, high-precision breast cancer diagnostics.
+
+
+   2. Problem Statement
+Breast MRI is a highly sensitive tool for breast cancer diagnosis, but its long scan times necessitate accelerated techniques like k-space undersampling. This introduces aliasing artifacts and a loss of fine detail, which are critical for distinguishing between subtle benign and malignant lesions and managing the high variability of breast tissue density. While existing Deep Learning (DL) models, such as CNN-based U-Nets, are effective for general image tasks, they are fundamentally ill-suited for the unique challenges of k-space reconstruction. These models rely on local receptive fields and translation invariance, which prevents them from capturing the global dependencies in frequency-domain necessary to reconstruct the complex morphologies inherent in breast MRI data.
+To address this, this research has implemented a specialized K-Space Transformer architecture that utilizes Implicit Neural Representation and a Hierarchical Decoder to learn the inductive biases of the frequency domain directly. However, the core problem persists: although the model has been developed and evaluated, the current reconstruction results are not yet optimal for high stakes diagnostic use. The evaluation reveals that while the K-Space Transformer effectively models global frequency relationships, the absence of iterative spatial domain refinement limits the model's ability to achieve the precision required for clinical grade fidelity. Consequently, the research identifies a critical performance gap: while a Transformer based approach is superior for frequency recovery, it remains sub-optimal without spatial optimization. Therefore, the ongoing challenge and the focus of future work is to bridge this gap bxy optimizing the existing framework through image domain refinement to ensure the high quality scans necessary for reliable diagnostic outcomes.
+
+
+   3. Research Objectives
+The primary objective of this research is to implement and evaluate a specialized K-Space Transformer architecture for the reconstruction of undersampled breast MRI. This approach aims to move beyond traditional grid based CNN limitations by learning the global inductive biases of the frequency domain to improve diagnostic quality in accelerated scans.
+The specific objectives are:
+* To implement and adapt a K-Space Transformer framework specifically for breast MRI, utilizing Implicit Neural Representation (INR) and a hierarchical decoder (LR and HR stages) to capture both global anatomy and fine lesion morphology.
+* To curate and preprocess a specialized breast MRI dataset consisting of undersampled and fully sampled k-space pairs (T1-weighted), ensuring a diverse representation of tissue densities and pathological features.
+* To evaluate the model’s ability to capture global dependencies within the frequency domain, assessing how well the Transformer based coordinate querying recovers missing k-space data compared to standard traditional CNN approaches.
+* To quantitatively and qualitatively assess the current model's performance using metrics such as PSNR and SSIM, while identifying the specific technical factors such as the current lack of spatial domain refinement that lead to the present sub-optimal reconstruction results.
+* To contribute to the scientific community by documenting the effectiveness of Transformer-based k-space learning for breast imaging, providing a roadmap for the transition from pure frequency domain models to optimized hybrid architectures.
+
+
+   4. Scope of the Project
+This research project is focused exclusively on the implementation and evaluation of a K-Space Transformer architecture for the reconstruction of undersampled breast MRI scans. The primary goal is to address the fundamental limitations of traditional CNNs in the frequency domain by learning the global inductive biases of breast MRI k-space.
+The scope is defined by the following parameters:
+Sequence Focus: The project is limited to enhancing the quality of T1-weighted breast MRI scans. These sequences are the clinical standard for anatomical detail and lesion characterization. Other sequences (e.g., T2-weighted, DWI) or imaging modalities are excluded to maintain methodological consistency within the k-space coordinate system.
+Technical Implementation: The scope includes the development of a model based on Implicit Neural Representation (INR) and a Hierarchical Decoder (LR and HR stages). This involves treating k-space as a continuous function where spatial coordinates are queried to reconstruct missing frequency data. Scope will be extended to integrate an image domain refinement module in future optimization phases.
+Assessment of Performance: The scope includes a rigorous comparative analysis against existing state of the art methods using quantitative metrics (PSNR, SSIM). Critically, the scope involves identifying the performance ceiling of a pure k-space approach, acknowledging that current results are not yet optimal and require future optimization.
+Clinical Context: While the research assesses the potential for scan time reduction, it is limited to a technical and computational validation. It does not involve full scale clinical trials or regulatory approval.
+
+
+Literature Review
+Recent literature has extensively explored deep neural networks—including CNNs, GANs,
+Vision Transformers—for MRI reconstruction across various anatomical regions. These
+data-driven approaches often outperform traditional compressed sensing and parallel imaging techniques in both reconstruction quality and computational efficiency.
+
+
+Despite this progress, breast MRI remains relatively underrepresented in the deep learning reconstruction landscape. The unique characteristics of breast tissue—dense fibroglandular structures, enhancement kinetics, and spatial heterogeneity—introduce domain-specific challenges that generic models inadequately address. Moreover, the scarcity of large-scale breast MRI datasets has limited specialized model development, particularly for 2D k-space acquisition protocols commonly used clinically.
+
+
+
+
+This review synthesizes existing research in deep learning-based MRI reconstruction and its application to breast imaging, highlighting key research gaps and the need for breast-specific architectures tailored to clinical requirements. 
+
+
+   5. MRI Imaging and k-space Representation
+Unlike modalities such as X-ray or Computed Tomography (CT), MRI operates by leveraging the magnetic properties of atomic nuclei, predominantly the hydrogen protons abundant in water molecules within the body, to generate highly detailed anatomical and functional images. The fundamental imaging process involves positioning a patient within a powerful magnetic field, subsequently applying tailored radiofrequency (RF) pulses to excite these protons. Upon the cessation of the RF pulses, the excited protons gradually relax back to their equilibrium state, emitting characteristic RF signals that are then detected by receiver coils within the MRI scanner. The distinct rates at which different tissue types return to equilibrium, characterized by their T1 and T2 relaxation times, are fundamental to creating the rich contrast observed in the final reconstructed image.
+The raw data acquired during an MRI scan is not directly an image but is systematically collected and stored in an abstract mathematical domain referred to as k-space. K-space functions as a data matrix that encapsulates the spatial frequency information of the object being imaged. The k-space contains the spatial frequency information of the imaged object, where low frequencies correspond to image contrast and high frequencies represent fine structural details. The fundamental relationship between k-space and image domain is mathematically described as:
+
+
+−1
+𝑥  =  𝐹        𝑘
+where x represents the reconstructed image,        −1 is the inverse Fourier transform, and k is the k-space data.  
+The central regions of k-space encode low spatial frequencies responsible for image contrast and signal-to-noise ratio, while peripheral regions capture high spatial frequencies that determine spatial resolution and fine anatomical details. This regional specialization means that undersampling patterns directly influence the balance between contrast preservation and detail retention in reconstructed images. Understanding this relationship is crucial for developing effective deep learning models, as these systems must not merely interpolate missing data but must intelligently infer whether absent information represents contrast or fine detail characteristics.
+
+
+
+
+
+
+   6. Undersampling in MRI and Its Effects
+MRI’s exceptional diagnostic value is often offset by lengthy acquisition times, particularly in high-resolution imaging, where scans may extend beyond an hour. Prolonged scan durations contribute to patient discomfort, increased healthcare costs, and heightened susceptibility to motion artifacts ( image distortion caused by patient movement during the scan )—an issue especially significant in populations such as pediatric patients or those with claustrophobia.
+A widely adopted strategy to address these limitations is undersampling of k-space data. Undersampling involves acquiring only a subset of the phase-encoding lines required for a fully sampled dataset under the Nyquist sampling theorem. By reducing the total number of phase-encoding steps, acquisition time per image slice is substantially decreased. Various sampling trajectories are employed for this purpose, including Cartesian, radial, spiral, Poisson disk, and Gaussian patterns, each influencing artifact characteristics and motion robustness.
+While undersampling accelerates scans, it transforms image reconstruction into an ill-posed inverse problem. The most prevalent consequence is aliasing artifacts (wrap-around), where incomplete k-space coverage causes spatially distinct signals to overlap in the reconstructed image. The severity of these artifacts grows with higher acceleration factors, potentially obscuring diagnostically relevant details.
+Traditional reconstruction strategies aim to mitigate these effects. Parallel Imaging methods such as sensitivity encoding (SENSE) or the generalized autocalibrating partial parallel acquisition (GRAPPA) techniques exploit spatial sensitivity information from multiple receiver coils to reconstruct full images from reduced k-space data. Compressed Sensing (CS) is another approach that exploits image sparsity via iterative optimization. However, CS performance declines with aggressive undersampling, often failing to recover high-frequency textures, and its iterative algorithms can be computationally expensive.
+
+
+   7. Deep Learning in Medical Image Reconstruction
+Deep learning (DL) has revolutionized MRI reconstruction. Neural networks learn to map undersampled data to high-quality images by leveraging large training sets. Such DL methods can achieve far higher acceleration factors than traditional CS. For instance, Noordman et al. report that DL models can often handle acceleration factors of 4 - 12× or more (Fig. 1), whereas conventional CS is typically limited to 2 - 5× before image quality degrades.
+  
+
+
+
+      1. Convolutional Neural Networks (CNNs)
+CNN-based approaches form the foundation of modern deep learning MRI reconstruction, with the U-Net architecture [4] emerging as particularly prominent due to its encoder-decoder structure with skip connections that effectively preserve fine details while removing undersampling artifacts. The U-Net's demonstrated superiority lies in its ability to reconstruct fine details from low-resolution inputs, achieving an average Peak Signal-to-Noise Ratio (PSNR) of 30.40, [4] outperforming other algorithms in terms of image quality metrics.
+Recent studies have shown that residual learning-enhanced U-Net models can handle 3- to 10-fold under-sampled MR data, enabling organ-level coverage with only 10- to 100-second scan times. [4]
+Multiple U-Net variants have been developed to address specific reconstruction challenges:
+Dense U-Net incorporates dense connections to improve feature propagation, while Residual U-Net uses residual learning to facilitate training of deeper networks. Attention U-Net integrates attention mechanisms to focus on relevant image regions, and Cascaded U-Net structures provide sequential refinement with PSNR performance standing on average 1.28 dB higher than baseline U-Net architectures. [5]
+Comparative studies have revealed that ResNet architectures can achieve image quality comparable to U-Net with significantly fewer parameters (100,000 versus 1.3 million), having profound implications for training efficiency and data requirements. Complex-valued CNNs have also demonstrated superior performance over real-valued networks, with complex-valued convolutions providing better reconstructions for both unrolled network architectures and U-Net-based architectures across knee, body, and phase-contrast datasets.
+[3] [4]
+Recent CNN architectures operate across both k-space and image domains to leverage complementary information. Dual-domain networks alternate between k-space and image processing to maintain data consistency while removing artifacts. The Projection-Based cascaded U-Net model demonstrates superior performance by incorporating k-space constraints directly into the network architecture, achieving enhanced reconstruction accuracy at higher acceleration factors. [5]
+      2. Generative Adversarial Networks (GANs)
+GANs have shown remarkable success in MRI reconstruction by learning to generate realistic images through adversarial training. The competitive learning process between generator and discriminator networks results in reconstructions with high perceptual quality, particularly beneficial for breast MRI applications.
+Key GAN variants for MRI reconstruction include:
+         * DAGAN (Deep De-Aliasing GAN) specifically designed for MRI reconstruction
+         * RefineGAN employing two-stage architecture for progressive reconstruction refinement
+         * CycleGAN enabling unpaired image translation for cross-domain MRI reconstruction
+         * WGAN utilizing Wasserstein loss for improved training stability
+Recent applications have demonstrated GAN effectiveness in breast imaging normalization, with cycle-consistent GANs learning bidirectional mapping between different scanner vendors (GE Healthcare and Siemens) while preserving anatomical structures and tissue morphology. [6]
+
+
+
+
+      3. Vision Transformers (ViTs)
+The introduction of Vision Transformers has brought attention mechanisms to MRI reconstruction, enabling superior modeling of long-range dependencies in medical images. ViTs process images as sequences of patches and use self-attention to capture global relationships, making them particularly suitable for reconstructing images with complex anatomical structures. [31]
+Recent applications include TransUNet [32] combining U-Net with transformer encoders for improved segmentation and reconstruction, Swing Transformer [33] providing hierarchical processing for high-resolution medical images, and ReconFormer [34] as a recurrent transformer specifically designed for MRI reconstruction tasks. ViTs have demonstrated exceptional performance in medical image classification across various modalities, achieving new benchmarks: BloodMNIST (97.90%), BreastMNIST (90.38%), PathMNIST (94.62%),
+and RetinaMNIST (57%). [35]
+
+
+
+
+      4. Diffusion Models
+Diffusion models represent the newest frontier in deep learning MRI reconstruction, offering superior image quality through iterative denoising processes[36]. These models learn to
+reverse a gradual noise addition process, enabling high-quality image generation with several compelling advantages:
+         * State-of-the-art image quality with superior fine detail preservation
+         * Uncertainty quantification through multiple reconstruction samples
+         * Self-supervised training capabilities reducing data requirements
+         * Natural integration with existing physics-based reconstruction methods
+Recent innovations include k-space cold diffusion models that perform degradation directly in k-space without Gaussian noise, enhancing model generalizability when sampling processes are similar. Score-based diffusion models have achieved near-perfect reconstruction for moderate undersampling factors in breast MRI, with radiologists rating images as almost indistinguishable from originals in 100% and 99% of cases at 2× acceleration. [8]
+
+
+
+
+
+
+      5. Hybrid Architectures
+Emerging hybrid approaches combine multiple deep learning paradigms with traditional iterative reconstruction methods. The hybrid DL-IR (Deep Learning and Iterative Reconstruction) framework simultaneously leverages DL capabilities for noise and artifact mitigation with iterative reconstruction strengths for detailed structure preservation. This approach has demonstrated success across multiple modalities: fast MRI (ACS reconstruction), low-dose CT (deep iterative reconstruction), and fast PET (HYPER deep progressive reconstruction). [37]
+
+
+
+
+  
+
+   8. Focus on Breast MRI Reconstruction from Undersampled 2D k-space
+The application of deep learning techniques to breast MRI reconstruction represents a particularly promising yet underexplored domain within medical imaging. Breast MRI's exceptional soft-tissue contrast makes it the most sensitive imaging modality for breast cancer detection, yet its lengthy acquisition times necessitate acceleration techniques that can compromise diagnostic quality.
+Recent studies have demonstrated the significant potential of DL approaches in breast MRI acceleration. Sauer et al. [7] applied a deep learning k-space-to-image reconstruction pipeline to accelerate breast diffusion-weighted MRI, achieving a 39% simulated scan-time reduction without influencing structural similarity (SSIM ≥0.86). Their approach combined traditional DL reconstruction with super-resolution algorithms (SRDL-DWI), with radiologists assigning the highest image quality ratings to the super-resolution enhanced reconstructions, achieving good interreader agreement (ICC - Intraclass Correlation Coefficient 0.834).
+Score-based diffusion models have shown particularly impressive results in breast MRI reconstruction. Okolie et al. [8] trained a score-based model on 9,549 breast MRI examinations and demonstrated high-fidelity reconstruction capabilities. At acceleration factor 2, radiologists rated the reconstructed images as almost indistinguishable from originals in 100% (radiologist 1) and 99% (radiologist 2) of cases. Even at higher acceleration factors, the model maintained diagnostic quality: 88% and 70% for acceleration factor 5, and 5% and 21% with extreme acceleration factor 20.
+
+
+   9. Image-Domain Refinement Modules in Transformer-Based MRI Reconstruction
+In MRI reconstruction from undersampled k-space data, many recent deep learning approaches adopt a hybrid strategy that combines frequency-domain processing with image-domain refinement. While transformers are particularly effective at modeling long-range dependencies in k-space or latent representations, purely k-space–based reconstruction often results in residual artifacts and loss of fine anatomical details. To address this limitation, several transformer-based MRI reconstruction frameworks incorporate an image-domain refinement module as a post-processing or iterative enhancement stage.
+Early deep learning approaches such as Deep Cascade CNNs (DC-CNN) and Variational Networks demonstrated that alternating between k-space consistency enforcement and image-domain refinement improves reconstruction quality by progressively reducing aliasing artifacts and restoring structural information (Schlemper et al., 2018 [59]; Hammernik et al., 2018 [60]). This concept has been retained and extended in transformer-based architectures.
+Recent transformer-based models typically employ the transformer to operate either directly in k-space or on learned latent representations, followed by an inverse Fourier transform to obtain a preliminary reconstructed image. An image-domain refinement module—often implemented using convolutional neural networks (CNNs), residual blocks, or U-Net–like architectures—is then applied to correct remaining artifacts and enhance spatial details. The motivation is that the image domain provides a more intuitive representation for enforcing anatomical plausibility, edge sharpness, and texture consistency, which may not be fully captured in the frequency domain alone.
+More recent models such as SwinMR and MoDL-Transformer hybrids integrate hierarchical or window-based transformers with image-domain refinement stages, demonstrating improved generalization across acceleration factors and anatomical regions (Chen et al., 2022; Feng et al., 2022). These refinement modules are particularly effective at restoring high-frequency image details and reducing structured aliasing artifacts caused by aggressive undersampling.
+Overall, image-domain refinement modules serve as a crucial complementary component in transformer-based MRI reconstruction pipelines. By leveraging the strengths of both global context modeling (via transformers) and local spatial feature enhancement (via CNN-based refinement), these hybrid approaches achieve state-of-the-art reconstruction performance under high acceleration factors. The continued integration of image-domain refinement is therefore a key design choice in modern transformer-based MRI reconstruction systems.
+   10. Foundations for Hybrid Transformer-Based MRI Reconstruction
+Recent advances in MRI reconstruction increasingly leverage hybrid CNN–Transformer architectures to overcome the limitations of purely convolutional or purely attention-based models. We highlight three foundational approaches that motivate modern hybrid super-resolution and reconstruction frameworks.
+      6. Swin Transformer (SwinMR)
+The Swin Transformer [62] architecture introduces a shifted-window self-attention mechanism, which replaces computationally expensive global attention with localized window-based attention. Unlike standard Vision Transformers (ViT), which compute attention across all image patches, Swin restricts attention to non-overlapping windows and shifts them across layers to enable cross-window interactions.
+In MRI reconstruction:
+1. This reduces computational complexity from quadratic to near-linear with respect to image resolution, making it suitable for high-resolution medical scans.
+
+2. The shifted-window design preserves fine anatomical textures, which is critical under aggressive k-space undersampling.
+
+3. By modeling long-range dependencies while maintaining efficiency, Swin-based reconstruction models (e.g., SwinMR variants) achieve improved detail recovery compared to CNN-only approaches.
+
+
+
+Thus, Swin Transformer establishes the efficient attention backbone for high-resolution MRI reconstruction.
+   7. T-HDDNet (Transformer-based Hierarchical Dynamic Decoder)
+T-HDDNet [63] introduces a hierarchical dynamic decoding strategy, where multi-scale features are progressively reconstructed using transformer-based attention modules.
+Key contributions relevant to MRI reconstruction include:
+   * A hierarchical feature representation, enabling simultaneous modeling of:
+
+      * Large anatomical structures (organs, tissue boundaries)
+
+      * Fine-grained details (lesions, textures)
+
+         * Dynamic routing of multi-scale patches using long-range dependencies.
+
+         * Adaptive feature fusion across decoder levels to enhance structural consistency.
+
+
+In the context of undersampled MRI reconstruction:
+            * Large-scale structures ensure anatomical correctness.
+
+            * Micro-scale recovery improves perceptual quality and reduces blurring.
+
+            * Hierarchical decoding helps stabilize reconstruction under high acceleration factors.
+
+This approach demonstrates the importance of multi-level representation learning in inverse imaging problems.
+
+
+               8. Multi-scale Hierarchical Vision Transformer (MERIT + CASCADE)
+The [61] proposes MERIT (Multi-scale hiERarchical vIsion Transformer) with a Cascaded Attention Decoder (CASCADE), published at Medical Imaging with Deep Learning (MIDL) 2023.Although originally designed for medical image segmentation, its architectural insights directly inform MRI reconstruction research.
+MERIT Backbone:
+MERIT addresses a key limitation in conventional transformers: self-attention computed at a single scale fails to generalize across varying anatomical sizes.
+It introduces:
+               * Multi-scale hierarchical attention windows
+
+               * Parallel attention mechanisms operating at different receptive fields
+
+               * Cross-scale feature aggregation
+
+This is highly relevant to MRI reconstruction because undersampled k-space leads to:
+                  * Loss of global structural coherence
+
+                  * Degradation of local high-frequency details
+
+Multi-scale attention allows the model to:
+                     * Capture global anatomical structure
+
+                     * Restore localized fine details
+
+                     * Improve robustness across different anatomical regions
+
+CASCADE Decoder :
+The Cascaded Attention Decoder (CASCADE) refines hierarchical features through progressive attention-based fusion.
+Key benefits for MRI reconstruction:
+                        * Multi-stage refinement improves spatial localization.
+
+                        * Attention-guided feature fusion reduces background noise artifacts.
+
+                        * Enhances structural continuity between reconstructed regions.
+
+Additionally, [61] introduces a multi-stage feature-mixing loss aggregation (MUTATION) strategy, which implicitly ensembles intermediate outputs during training without increasing inference cost. This concept is useful in reconstruction tasks where multi-stage supervision improves convergence and stability.
+
+
+                           11. Research Gap
+Despite the remarkable progress in deep learning-based MRI reconstruction and its emerging applications in breast imaging, several critical research gaps remain that limit the full potential of these technologies in clinical practice.
+                           9. Limited Breast-Specific Model Development
+While deep learning has achieved considerable success in general MRI reconstruction tasks, the development of models specifically tailored for breast MRI characteristics remains significantly underdeveloped. Most existing DL approaches are designed for brain or cardiac imaging, with limited consideration for the unique features of breast tissue including complex heterogeneous tissue compositions, subtle lesion morphology, variable breast density patterns, and specific enhancement kinetics that are crucial for accurate diagnosis.
+The intricate temporal dynamics of breast Dynamic Contrast-Enhanced MRI (DCE-MRI), characterized by rapid initial enhancement followed by varied washout patterns that differentiate benign from malignant lesions, require specialized network architectures that can effectively model these spatiotemporal relationships. Current generic approaches fail to fully exploit these domain-specific characteristics, leading to suboptimal reconstruction performance in critical diagnostic regions. [9]
+
+
+                           10. Severe Data Scarcity and Dataset Limitations
+Data scarcity represents perhaps the most significant barrier to advancing breast MRI reconstruction research. The largest breast MRI DL studies to date include only a few thousand examinations, substantially smaller than datasets available for other medical imaging applications. The fastMRI dataset contains merely 300 3D breast scans, insufficient for training robust, generalizable models. [38]
+This scarcity is particularly problematic for breast MRI due to several factors:
+                           * Protocol Variability: Breast MRI protocols vary significantly across institutions and even within the same institution over time, making it challenging to develop generalizable models
+                           * Expert Annotation Requirements: High-quality breast MRI analysis requires expert radiologist annotations, which are time-consuming and expensive to obtain
+                           * Regulatory and Privacy Constraints: Breast imaging data is highly sensitive, with stringent privacy requirements that complicate data sharing initiatives
+The recent release of the MAMA-MIA dataset with 1,506 expert-validated segmentations represents progress, but remains insufficient compared to the hundreds of thousands of images typically required for robust deep learning model development. [39]
+                           11. Lack of Hybrid Architecture Investigation
+Current research has not adequately explored hybrid model architectures that combine the strengths of different deep learning paradigms specifically for breast MRI reconstruction. While individual approaches such as CNNs, GANs, Vision Transformers, and diffusion models have shown promise, limited research has investigated:
+                           * CNN-Transformer Hybrids: Combining local feature extraction capabilities of CNNs with global attention mechanisms of transformers for capturing both fine tissue details and broader anatomical context
+                           * GAN-Diffusion Combinations: Leveraging GAN's adversarial training for realistic tissue appearance with diffusion models' superior denoising capabilities 
+                           * Multi-Scale Fusion Architectures: Integrating features across different spatial and temporal scales to handle the multi-resolution nature of breast MRI data
+
+
+                           12. Insufficient 2D k-space Focus
+Research specifically addressing 2D k-space reconstruction for breast MRI remains markedly limited. Most studies focus on 3D volumetric approaches or generic 2D methods without considering the specific characteristics of 2D breast MRI acquisition:
+                           * Slice-specific Optimization: 2D acquisition patterns may benefit from slice-specific reconstruction strategies that current 3D-focused approaches do not address.
+                           * Temporal Consistency: Dynamic contrast-enhanced 2D acquisitions require specialized handling of temporal coherence across time series.
+                           * Computational Efficiency: 2D approaches may offer significant computational advantages for real-time or near-real-time reconstruction applications.
+
+
+
+
+Expected Outcomes
+Validated K-Space Transformer Framework for Breast MRI: The primary outcome of this research is the successful implementation and validation of a Transformer-based framework that processes signals directly in the k-space of breast MRIs. By utilizing Implicit Neural Representation and a Hierarchical Decoder (LR and HR stages), the model is expected to demonstrate a superior ability to learn the global inductive biases of the frequency domain compared to traditional local-receptive-field CNNs. The research will provide a technical proof of concept for coordinate based querying in reconstructing complex breast tissue structures.
+Identification of Frequency-Domain Performance Ceilings: A significant outcome of the current evaluation phase is the quantitative and qualitative identification of the limitations of a pure k-space approach. While the model is expected to reduce aliasing artifacts from undersampled data, initial results indicate that these reconstructions are not yet optimal. A key outcome will be a detailed analysis of this performance gap, demonstrating that while the K-Space Transformer excels at frequency recovery, the lack of spatial domain refinement prevents it from reaching clinical-grade fidelity. This finding serves as the scientific justification for future optimization.
+Comparative Technical Analysis: The developed Transformer model will be rigorously compared against existing state of the art methods, including traditional zero filling and standard CNN only architectures (e.g., U-Nets). Using metrics such as Peak Signal to Noise Ratio (PSNR) and Structural Similarity Index (SSIM), the research will highlight the K-Space Transformer’s advantages in capturing global dependencies. These results will be documented in a comprehensive report, providing visual comparisons of reconstructed k-space spectrograms and their corresponding image-domain translations to show where the current architecture succeeds and where it requires refinement.
+Roadmap for Future Optimization and Downstream Integration: The project will result in a clear technical roadmap for future work. This includes the planned integration of ImagevDomain Refinement module to optimize the current sub optimal results. Once optimized, the model is intended for integration with downstream clinical tasks, such as lesion detection. The current research establishes the necessary baseline for how improved k-space consistency can eventually enhance the input quality for computer aided diagnosis (CAD) systems, ultimately aiming to improve sensitivity and specificity in breast cancer screening
+
+
+
+
+4. Methodology
+
+
+
+
+4.1 Data Processing & Tokenization Pipeline
+We utilize MRI datasets consisting of multi-slice volumes. To prepare the data for training a k-space reconstruction model, we adhere to the following preprocessing pipeline:
+                           1. Data Loading & Spatial Cropping: K-space data is loaded from H5 files containing complex-valued 3D volumes. Each volume is cropped to a fixed spatial resolution from the center to ensure uniform input dimensions. Volumes smaller than the target size are excluded. The complex-valued MRI signals are represented as double channels (real and imaginary components).
+                           2. Variance-Based Slice Selection: To remove low-information slices (e.g., background or noise-dominated slices), we apply variance-based filtering. The variance is calculated on the magnitude of each slice across spatial dimensions. Slices with the lowest 20% variance are removed, retaining only the most informative slices while preserving their original spatial ordering.
+                           3. Image Domain Normalization: K-space data is temporarily converted to image domain via centered 2D Inverse Fast Fourier Transform (IFFT) with orthonormal scaling. Each slice is then independently normalized to zero mean and unit variance: normalized_slice = (slice - mean) / std. This ensures consistent intensity ranges across different scans and slices.
+                           4. K-Space Domain Conversion: The normalized image-domain slices are converted back to k-space using centered 2D Fast Fourier Transform (FFT) with orthonormal scaling. This produces the final high-resolution (HR) ground truth k-space data used for training.
+                           5. Low-Resolution Data Generation: To enable multi-resolution supervision in the decoder, low-resolution (LR) k-space data is generated. For each HR k-space sample: (1) apply IFFT to convert to image domain, (2) apply 2× average pooling (kernel size 2, stride 2) to downsample spatially, (3) apply FFT to convert back to k-space. This produces LR k-space at half the spatial resolution (e.g., 160×160 for HR 320×320).
+                           6. Data Splitting: The preprocessed HR and LR k-space datasets are split into training (70%), validation (15%), and test (15%) sets using stratified random sampling with a fixed seed.
+                           7. Runtime Coordinate Grid Generation: During dataset initialization, normalized coordinate grids are generated for both HR and LR resolutions. Each grid contains normalized 2D coordinates in [0,1]×[0,1] corresponding to spatial frequency locations. For LR data, all pixel positions are enumerated to create a position sequence used for decoder queries.
+                           8. Undersampling Trajectory: We simulate accelerated acquisition by applying retrospective undersampling masks. Consistent with the reference implementation, we utilize Gaussian 2D sampling masks to create the undersampled spectrograms. For each training sample, a mask is randomly selected from a pre-generated set, creating variable undersampling patterns for data augmentation.
+                           9. Coordinate-Based Tokenization: Unlike CNNs that ingest a fixed grid, our Transformer ingests a sequence of available points. Let the undersampled spectrogram be represented by a set of    sampled points,   . Each sample    is defined as a tuple   , where: 
+                              *    represents the sampled complex value (amplitude and phase).
+                              *    represents the 2D spatial frequency coordinates of that sample.
+
+
+This tokenization allows the model to process non-Cartesian or arbitrary sampling patterns dynamically, without being constrained by the grid dimensions.
+
+
+4.2 Model Architecture: The K-Space Transformer
+The architecture is composed of a Feature Encoder and a Hierarchical Feature Decoder. The primary objective is to learn a continuous function    that maps spatial coordinates to k-space values, conditioned on the visible samples.
+  
+
+
+
+
+
+A. Feature Encoder
+The goal of the encoder is to compute a compact, global feature representation for the observed k-space points.
+                                 * Input Embedding: We convert the raw sampled points into a vector sequence   . This is achieved via a learnable Multilayer Perceptron (MLP) applied to the value   , summed with a sinusoidal Positional Encoding (PE) applied to the coordinate   :
+
+  
+The embedding dimensionality    is set to 256.
+
+                                 * Transformer Encoder Layers: The sequence is processed by 4 standard Transformer encoder layers. Each layer consists of a Multi-Head Self-Attention (MHSA) module and a Feed-Forward Network (FFN) with residual connections.
+
+                                 * Global Dependency Learning: Through the self-attention mechanism, the encoder captures the global dependencies between different frequency bins. This is critical for MRI, where artifacts (like aliasing) are non-local. The output is a latent representation    that encodes the spectral properties of the specific breast MRI slice.
+  
+
+
+
+B. Hierarchical Feature Decoder
+To reconstruct high-resolution breast MRI scans efficiently, we implement a hierarchical decoding strategy, splitting the task into a Low-Resolution (LR) stage and a High-Resolution (HR) stage. This design reduces the computational complexity from    (standard self-attention) to a more manageable   , where    is the low-resolution sequence length.
+
+
+1. Low-Resolution (LR) Decoder This module is responsible for reconstructing the coarse anatomical structure of the breast tissue (low-to-mid frequency bands).
+
+
+                                    * Structure: We employ 4 Transformer decoder layers.
+
+                                    * Query Generation: The queries are generated from the normalized positional coordinates of a down-sampled grid.
+                                    * Attention Mechanism: Each layer utilizes a Multi-Head Cross-Attention (MHCA) module to query the encoder output   , followed by a Multi-Head Self-Attention (MHSA) module to model relationships between the predicted frequency bins.
+
+2. High-Resolution (HR) Decoder This module focuses on filling in the fine-grained texture details (high-frequency bands) required for identifying subtle fibroglandular patterns.
+
+
+                                       * Structure: We employ 6 Transformer decoder layers.
+
+                                       * Key/Value Projection: The upsampled output from the LR decoder serves as the context (Key and Value) for this stage.
+
+                                       * Optimization: To minimize memory consumption, we simplify the HR decoder layers by retaining only the Multi-Head Cross-Attention module and the FFN, removing the computationally expensive self-attention module. This allows the model to query specific high-frequency coordinates    to predict their complex values    without calculating the quadratic attention map for the full resolution grid.
+3. Image-Domain Refinement Module : This final module receives the HR decoder output, projects it into the image domain with a differentiable Inverse Fast Fourier Transform (IFFT), and applies a five-layer convolutional refinement network before transforming the corrected image back to k-space with a differentiable FFT. The refinement backbone uses Leaky ReLU activations, 3×3 kernels, and filter counts of 64, 64, 64, 64, and 2 across the five layers. This module suppresses ringing artifacts and restores local spatial consistency that is not fully captured by k-space decoding alone.
+
+
+  
+
+
+
+5. Summary of Completed Works 
+
+
+5.1 Implementation Specifics
+Data Preprocessing & Pipeline Validation The Duke Breast MRI dataset comprises complex, 3D dynamic contrast-enhanced volumes. To align with the 2D slice-based architecture of the K-Space Transformer, we executed the following preprocessing protocols:
+                                          * Volume Slicing: We extracted the central slices from the T1-weighted fat-saturated sequences of 50 patients. This selection ensures a representative balance of fibroglandular tissue and fatty background, minimizing the impact of coil sensitivity profiles found at the volume edges.
+Then those MRI volumes were pre-processed using the following pipeline, which is then ready to feed our transformer architecture.
+5.2 Data Preprocessing Pipeline
+5.2.1 Overview
+The K-Space Transformer architecture requires carefully preprocessed data to enable effective training. Our preprocessing pipeline transforms raw MRI h5 files into structured NumPy arrays optimized for the hierarchical decoder architecture. The pipeline consists of four main stages: (1) k-space data extraction and normalization, (2) low-resolution data generation, (3) undersampling mask generation, and (4) dataset partitioning.
+5.2.2 Stage 1: K-Space Data Extraction and Normalization
+A) Rationale
+Raw MRI data in h5 format is stored in varying dimensions and contains uncalibrated intensity values, making it unsuitable for direct neural network training. The primary objectives of this stage are to:
+                                          1. Standardize spatial dimensions: Ensure uniform image size across all samples to enable batch processing
+                                          2. Normalize intensity distributions: Achieve consistent N(0,1) normalization in the image domain to stabilize gradient flow during training
+                                          3. Remove low-information slices: Apply variance-based slice selection to eliminate slices with minimal anatomical information (e.g., background-heavy slices)
+                                          4. Convert to efficient storage format: Transform from compressed h5 to fast-access NumPy arrays
+B) Implementation
+
+
+The concat_all_h5py() function processes each MRI volume through the following pipeline:
+  
+
+Step-by-step process:
+                                          1. Loading: Read k-space data from h5 files (typical shape: [26, 640, 372] for 26 slices)
+                                          2. Spatial cropping: Center-crop to 320×320 pixels
+                                          * Rationale: Removes peripheral low-signal regions and standardizes dimensions
+                                          * Formula: crop_start = (original_size - 320) // 2
+                                          3. Complex-to-channel conversion: Represent complex k-space as 2-channel array [real, imaginary]
+                                          * Rationale: PyTorch operates on real-valued tensors; this representation preserves all k-space information
+                                          4. Image domain conversion: Apply inverse FFT to obtain spatial domain representation
+                                          * Purpose: Normalization is more meaningful in image domain where pixel intensities represent tissue contrast
+                                          5. Variance-based slice selection:
+  
+
+         Rationale: Removes 20% of slices with lowest variance (typically background or                 motion-corrupted slices)
+                                          * Method: Calculate variance across spatial dimensions, sort slices, keep top 80%
+                                          * Benefit: Reduces dataset size while maintaining information-rich slices
+
+
+                                          6. Normalization: Per-slice N(0,1) normalization
+                  normalized = (image - mean) / std
+                                          * Rationale: Ensures consistent intensity ranges across different patients and acquisition parameters
+                                          * Impact: Stabilizes training and improves convergence
+                                          7. K-space conversion: Apply forward FFT to return to k-space domain
+                                          * Why k-space?: The K-Space Transformer processes signal directly in frequency domain, where undersampling patterns are naturally defined
+Output: k_data.npy with shape [N, 320, 320, 2] where N is total number of slices across all volumes
+5.2.3 Stage 2: Low-Resolution Data Generation
+A) Rationale
+The K-Space Transformer employs a hierarchical decoder architecture consisting of a Low-Resolution (LR) decoder followed by a High-Resolution (HR) decoder. This design is motivated by computational efficiency and follows a coarse-to-fine reconstruction strategy.
+Key motivations:
+                                          1. Computational tractability: Self-attention complexity is O(m²) where m is sequence length
+                                          * For 320×320 k-space: m = 102,400 → O(10¹⁰) operations (infeasible)
+                                          * For 160×160 LR k-space: m = 25,600 → O(6.5×10⁸) operations (manageable)
+                                          2. Hierarchical learning: LR decoder captures global structure (low-frequency components), HR decoder adds fine details (high-frequency components)
+                                          3. Training stability: Progressive training (LR → HR) allows the model to first learn anatomical structure before texture details
+B) Implementation
+  
+
+  
+
+Process:
+                                          1. Transform HR k-space to image domain (IFFT)
+                                          2. Apply 2D average pooling with stride 2 to reduce resolution
+                                          3. Transform back to k-space domain (FFT)
+Output: LR_k_data.npy with shape [N, 160, 160, 2]
+Role in training: LR k-space serves as:
+                                          * Intermediate target for LR decoder supervision
+                                          * Prior information for HR decoder initialization
+                                          * Computational bottleneck reduction by limiting self-attention to 160×160 grid
+5.2.4 Stage 3: Undersampling Mask Generation
+A) Rationale
+Undersampling masks simulate real MRI acquisition scenarios where only a subset of k-space is measured. Multiple mask types are necessary to:
+                                          1. Simulate clinical diversity: Different MRI sequences use different sampling strategies
+                                          2. Improve generalization: Training on varied patterns prevents overfitting to specific trajectories
+                                          3. Enable robust evaluation: Testing on unseen mask types validates model adaptability
+B) Mask Types Implemented
+We generate six distinct undersampling patterns, each representing a clinically-relevant acquisition strategy:
+Mask Type
+	Sampling Pattern
+	Acceleration
+	Clinical Relevance
+	Cartesian Equispaced
+	Uniform line spacing
+	4× ,x10
+	Standard parallel imaging
+	Cartesian Random
+	Random line selection
+	4× , x10
+	Compressed sensing MRI
+	Variable Density Cartesian
+	Gaussian center weighting
+	2-4× ,x10
+	Advanced compressed sensing
+	Uniform Radial
+	Evenly-spaced spokes
+	~3× ,x10
+	Motion-robust imaging
+	Variable Density Radial
+	Non-uniform spoke distribution
+	~3× , x10
+	Dynamic imaging
+	Spiral
+	Archimedean spiral
+	~3×, x10
+	Functional MRI
+	    
+
+C) Implementation
+  
+
+Key features:
+                                          1. Center frequency preservation: All masks fully sample central k-space (~8% of lines)
+                                          * Rationale: Low frequencies contain most image energy and structural information
+                                          2. Stochastic variation: Multiple masks per type with randomized sampling
+                                          * Purpose: Data augmentation during training
+                                          3. Controlled acceleration: Each mask type targets specific undersampling ratios
+                                          * Measurement: Acceleration = Total points / Sampled points
+Example: Cartesian Random mask generation
+  
+       
+Output: combined_masks.npy with shape [60, 320, 320]
+Training protocol:
+                                          * Random mask selection per sample from the pool of 60 masks
+                                          * Mask reassignment every 3 epochs to increase training diversity
+                                          * Different mask types for training (combined) vs. validation (single type) to assess generalization
+5.2.5 Stage 4: Dataset Partitioning
+A) Rationale
+Proper data splitting is essential for:
+                                          1. Unbiased evaluation: Validation/test sets must contain unseen data
+                                          2. Overfitting detection: Monitoring train vs. validation metrics
+                                          3. Final performance estimation: Hold-out test set for publication-quality results
+B) Implementation
+
+
+  
+
+D) Splitting Strategy
+                                          * 70% Training
+Primary dataset used for gradient updates and model parameter learning.
+                                          * 15% Validation
+Used for hyperparameter tuning, model selection, and early stopping.
+                                          * 15% Test
+Reserved strictly for final performance evaluation at the end of the project.
+E) Important Considerations
+                                             * Patient-Level Splitting
+Ensure that all slices or samples from the same patient remain within a single split to prevent data leakage.
+                                             * Identical Splits for HR and LR
+Maintain one-to-one correspondence between high‑resolution (HR) and low‑resolution (LR) data across all splits.
+                                             * Sequential Splitting
+Use simple contiguous splits.
+
+
+
+
+5.2.6 Preprocessing Pipeline Summary
+The complete preprocessing workflow transforms raw MRI data through the following stages:
+  
+
+5.2.7 Integration with K-Space Transformer
+The preprocessed data interfaces with the model through the TrainDataSet class:
+  
+
+Per-sample data flow:
+                                                * Load HR k-space (ground truth)
+                                                * Load LR k-space (LR decoder target)
+                                                * Randomly select undersampling mask
+                                                * Apply mask to HR k-space → undersampled k-space
+                                                * Extract sampled points and positions → encoder input
+                                                * Extract unsampled positions → decoder queries
+                                                * Return batch with all components for model forward pass
+This preprocessing pipeline ensures that the K-Space Transformer receives well-conditioned, appropriately formatted data that enables efficient hierarchical reconstruction from undersampled k-space measurements.
+
+
+5.3. Model Instantiation & Hyperparameters 
+We successfully implemented the K-Space Transformer in PyTorch. The current experimental checkpoint operates with the following configuration:
+                                                * Encoder: 4 Layers, 4 Multi-head Self Attentions, Embedding Dimension   .
+                                                   * Encoder Layer Composition: Self-attention with dropout, followed by layer normalization and a two-layer feedforward network (linear → ReLU activation → dropout → linear → dropout) with residual connections.
+                                                   * LR Decoder: 4 Layers, utilizing both Multi-head Cross-Attention and Multi-head Self-Attention.
+                                                   * LR Decoder Layer Composition: Cross-attention with encoder memory (with dropout), self-attention (with dropout), then layer normalization and a two-layer feedforward network (linear → activation → dropout → linear → dropout) with residual connections.
+                                                   * HR Decoder: 6 Layers, utilizing Multi-head Cross-Attention only (to reduce memory overhead).
+                                                   * HR Decoder Layer Composition: Cross-attention with LR decoder memory (with dropout), followed by layer normalization and a two-layer feedforward network (linear → activation → dropout → linear → dropout) with residual connections.
+                                                   * Refinement Module: 5 convolution layers with Leaky ReLU activations; the first four layers use 64 3×3 filters and the final layer uses 2 3×3 filters. Differentiable IFFT and FFT layers are inserted before and after the convolutions to convert between k-space and image domain during refinement.
+                                                   * Deep Supervision: We enabled deep supervision on all intermediate decoder layers, calculating the    loss between the intermediate reconstruction    and the ground truth   .
+                                                   * Optimizer: AdamW with an initial learning rate of    and a cosine annealing schedule.
+5.4 Hardware Specifications & Computational Resources
+Compute Infrastructure High-performance model training was conducted using an NVIDIA RTX PRO 6000 GPU on RunPod.com . Initial data pre-processing tasks were performed on a GCP virtual machine and uploaded datasets to a GCP bucket. To minimize I/O overhead, pre-processed datasets were migrated from Google Cloud Storage (GCS) to RunPod network storage.
+Cost Analysis:
+The total expenditure for the project (including refinement-stage training) is approximately $282.09, broken down as follows:
+                                                      * Model Training: $237.08 (Based on 310 epochs at 20-30 minutes per epoch at a rate of $1.82/hr)
+                                                      * Network Storage Volume: $5.15 (50 GB capacity)
+                                                      * Operations & Miscellaneous: $39.86 (Includes environment setup, model functionality validation, debugging, inference for both OUCR and K-Space transformer models, and idle resource costs)
+5.5 Three-Stage Training Strategy
+A multi-stage training process was implemented to target progressive resolution levels, transitioning from coarse structures to high-resolution k-space prediction and finally image-domain refinement.
+
+
+Stage
+	Epoch Range
+	Active Components
+	Purpose
+	LR
+	1 → 50
+	Encoder, LR Decoder
+	Learn low-resolution reconstruction
+	HR
+	51 → 150
+	Encoder, LR Decoder
+HR Decoder
+	Learn high-resolution k-space prediction
+	Refinement
+	151 → 310
+	Encoder, LR Decoder, HR Decoder, Image-Domain Refinement Module
+	Reduce residual spatial artifacts and improve final image fidelity
+	Stage 1: LR Stage (Epochs 1-50)
+The primary objective of this stage is to establish fundamental reconstruction capabilities by learning coarse, low-resolution structures.
+                                                      * Supervision: Encoder and LR decoder are supervised with 160×160 targets.
+                                                      * HR Decoder Status: Outputs zeros and remains untrained during this phase.
+Stage 2: HR Stage (Epochs 51-150)
+This stage builds upon the learned LR representations to refine the model for high-resolution reconstruction.
+                                                      * Supervision: The HR decoder is supervised with 320×320 targets.
+                                                      * Component Activity: The HR decoder learns to predict unsampled k-space points.
+                                                      * Training continues for the Encoder and LR decoder to maintain coarse representation integrity.
+Stage 3: Image-Domain Refinement Stage (Epochs 151-310)
+This stage activates the hybrid refinement pathway to remove local spatial artifacts that remain after k-space reconstruction.
+                                                      * Supervision: The refinement module is supervised with the high-resolution image-domain target derived from the fully sampled reconstruction.
+                                                      * Component Activity: The HR decoder output is projected into the image domain, refined with the convolutional module, and then reprojected to k-space as a residual correction.
+                                                      * Training continues for the Encoder, LR decoder, HR decoder, and refinement module so that global frequency recovery and local spatial correction remain aligned.
+Implementation Benefits
+                                                      * Stability: Improves convergence stability and prevents mode collapse in high-dimensional space.
+                                                      * Representation: Facilitates the learning of hierarchical multi-scale representations.
+                                                      * Optimization: Reduces overfitting to high-frequency noise.
+                                                      * Refinement: Improves local spatial consistency after the transformer has recovered the global k-space structure.
+
+
+5.6 Deep Supervision & Dual-Domain Loss
+The training framework employs a Dual-Domain Optimization strategy coupled with Deep Supervision, where the total loss is calculated by aggregating the Weighted Mean Squared Error (MSE) across all decoder layers.
+Dual Domain Optimization Strategy
+The model undergoes simultaneous loss calculation in both the spatial (Image) and frequency (K-Space) domains to provide complementary supervision:
+                                                      * K-Space Domain (MSE): This domain enforces frequency domain accuracy and precise point reconstruction. It is critical for maintaining data consistency with sampled points and capturing global frequency patterns.
+                                                      * Image Domain (MSE): This domain ensures spatial consistency and perceptual quality. It captures spatial relationships and provides a more interpretable medium for visual assessment.
+Combined Effect: By balancing frequency accuracy with spatial coherence, this dual-domain approach achieves superior reconstruction quality compared to single-domain training.
+Refinement-Stage Objective: The final hybrid stage adds image-domain supervision on the output of the refinement module. The HR decoder output is projected into the image domain, refined with the convolutional module, and compared against the high-resolution ground truth image so that residual ringing and texture loss are penalized directly.
+Deep Supervision Mechanism
+Deep supervision is integrated to provide several architectural and optimization advantages:
+                                                      1. Gradient Flow: It provides direct gradients to intermediate layers, which is especially important for preventing the vanishing gradient problem in deep networks.
+                                                      2. Hierarchical Learning: The multiple supervision signals ensure that each layer in the network learns different levels of abstraction.
+                                                      3. Improved Convergence: The presence of multiple supervision signals across the architecture accelerates the overall training process.
+Weight Distribution Strategy: The supervision is balanced through a specific weighting scheme:
+                                                      * Early Layers: Assigned gentle supervision to allow for flexibility in feature learning.
+                                                      * Final Layer: Assigned strong supervision to ensure the highest possible output quality.
+Loss Formulations
+The total loss is the sum of the weighted K-Space and Image domain MSE across all active decoder layers.
+1. LR Stage (Epochs 1–50)
+The loss is calculated over 4 LR layers, resulting in 8 total loss terms (4 layers × 2 domains):
+  
+
+2. HR Stage (Epochs 51–150)
+The loss expands to include the high-resolution components, totaling 20 loss terms [(4 LR + 6 HR layers) × 2 domains]:
+  
+
+  
+
+
+
+2. Refinement Stage (Epochs 151–310)
+  
+
+The total loss for the Image Domain Refinement Module is calculated as a weighted combination of three distinct objective functions to ensure comprehensive image restoration.
+                                                      * The L1 loss term enforces pixel-wise fidelity by minimizing the absolute difference between the refined and ground truth images, effectively reducing artifacts while preserving global intensity.
+                                                      * To enhance high-frequency details and textures, the Perceptual loss leverages deep feature embeddings to ensure the reconstructed image aligns with the semantic and structural characteristics of the reference.
+                                                      * Furthermore, the SSIM loss is incorporated to maintain structural integrity by penalizing deviations in luminance and contrast that standard pixel-wise metrics might overlook.
+These components are balanced using the hyperparameters λ1, λ2 and λ3 to optimize the model for both quantitative accuracy and qualitative diagnostic utility. 
+Ground Truth Targets
+The model is supervised using targets at two distinct resolution levels:
+                                                      * High-Resolution Targets (320 × 320):
+                                                      * K-Space Domain: Original, fully sampled high-resolution k-space data.
+                                                      * Image Domain: The Inverse Fast Fourier Transform (IFFT) of the original k-space data.
+                                                      * Low-Resolution Targets (160 × 160):
+                                                      * Image Domain: Derived via 2× Average Pooling performed on the High-Resolution Image Domain target.
+                                                      * K-Space Domain: Derived via a Fast Fourier Transform (FFT) performed on the Low-Resolution Image Domain target.
+Low-Resolution Targets are used in the LR Stage. High-Resolution Targets are used in the HR Stage. The refinement stage uses the high-resolution image-domain target as the direct supervision signal for the final correction module.
+5.7 Training Performance
+  
+
+Phase I: Low-Resolution (LR) Stage (Epochs 1–50)
+During the initial 50 epochs, the training focuses on establishing fundamental reconstruction capabilities through coarse 160 x 160 targets.
+                                                      * Loss Behavior: The MSE loss exhibits a steady, consistent decline for both training and validation sets. This reflects the model successfully learning low-resolution structures and spatial consistency within the image domain.
+                                                      * Supervision Impact: The focus on only 4 LR layers (8 loss terms) allows the Encoder and LR Decoder to stabilize their representations without the complexity of high-frequency noise.
+                                                      * Convergence: By epoch 50, the loss reaches a local plateau, indicating that the fundamental reconstruction capabilities have been fully established.
+Transition and Phase II: High-Resolution (HR) Stage (Epochs 51–150)
+At epoch 50 (indicated by the dashed vertical line), the training strategy shifts to high-resolution k-space prediction.
+                                                      * The "Loss Spike": A significant jump in MSE loss occurs immediately at epoch 51. This is expected behavior as the loss function complexity increases from 8 terms to 20 terms. The model is suddenly tasked with:
+                                                      * Predicting unsampled k-space points for 320 x 320 targets.
+                                                      * Optimizing 6 additional HR decoder layers.
+                                                      * Balancing original LR representations with new, high-dimensional frequency data.
+                                                      * Rapid Adaptation: Following the spike, the loss drops sharply between epochs 51 and 80. This demonstrates the effectiveness of the learned LR representations as a foundation; the model does not "relearn" from scratch but rather builds upon the established coarse features to capture global frequency patterns.
+                                                      * Stability and Convergence: From epoch 80 onward, the curve flattens into a smooth descent. The dual-domain supervision prevents mode collapse and keeps the validation loss closely tracked with the training loss, indicating strong generalization and minimal overfitting to high-frequency noise.
+Effectiveness of the Dual-Phased Decoder Training Strategy
+The final performance metrics validate the multi-scale approach:
+                                                      * Frequency and Spatial Balance: The convergence at a lower MSE level than the LR stage plateau confirms that combined image and k-space supervision produces superior reconstruction quality compared to single-domain training.
+                                                      * Deep Supervision Utility: The smooth descent in the HR stage suggests that the weighted distribution (stronger supervision on final layers) successfully prioritized output quality while maintaining flexible feature learning in the intermediate layers.
+                                                      * Final State: The model concludes at its lowest recorded MSE (approx. 0.018 for training and 0.023 for validation), successfully balancing frequency accuracy with spatial coherence. This marks the end of the HR-only phase before refinement is activated.
+
+
+Phase III: Image-Domain Refinement Stage (Epochs 151–310)
+The refinement stage introduces a second transition in the loss curve as the model shifts from pure k-space prediction to hybrid image-domain correction.
+                                                      * Loss Behavior: The composite loss jumps when the refinement module is activated because the network must now optimize spatial artifact removal in addition to preserving k-space consistency.
+                                                      * Rapid Adaptation: After the initial spike, the loss declines steadily across epochs 151–310 as the refinement module learns to suppress ringing and sharpen tissue boundaries.
+                                                      * Convergence: By the final epoch, the refinement-stage loss settles around 0.156 for training and 0.204 for validation.
+Effectiveness of the Hybrid Strategy
+The final performance metrics validate the full multi-stage approach:
+                                                      * Frequency and Spatial Balance: The refinement stage preserves the global frequency recovery learned in the HR phase while improving local spatial fidelity.
+                                                      * Deep Supervision Utility: The staged supervision and final refinement term stabilize training and yield the best overall reconstruction quality.
+                                                      * Final State: The complete hybrid model concludes at approximately 0.156 training and 0.204 validation loss after refinement, while the earlier HR stage ended at approximately 0.018 training and 0.023 validation MSE.
+5.8 Evaluation Framework
+Quantitative Metrics
+Model fidelity and reconstruction accuracy are evaluated using the following industry-standard metrics:
+                                                      * Peak Signal-to-Noise Ratio (PSNR)
+                                                      * Structural Similarity Index (SSIM)
+Baseline Model
+OUCR (Over and Under complete Convolutional RNN for MRI Reconstruction) model was selected as the primary baseline model for comparative analysis against the K-Space Transformer. SwinMR is also included as a transformer-based reference benchmark for context.
+5.8.1 Quantitative Analysis: PSNR and SSIM Performance
+1. PSNR Performance
+PSNR measures the ratio between the maximum possible power of a signal and the power of corrupting noise. The refined hybrid model achieves the highest PSNR at every acceleration factor.
+Method
+	x3
+	x5
+	x7
+	x10
+	SwinMR
+	31.51
+	30.36
+	29.21
+	27.48
+	OUCR (baseline)
+	38.47
+	36.78
+	34.25
+	31.61
+	 K-Space Transformer (no image domain refinement)
+	37.02
+	34.57
+	31.94
+	28.36
+	K-Space Transformer (with image domain refinement)
+	38.81
+	37.49
+	35.16
+	32.43
+	Analysis of Results: The quantitative evaluation shows that the refinement stage closes the PSNR gap and pushes the hybrid model above the no-refinement version at every acceleration factor. Compared with the k-space-only model, PSNR improves by 1.79 dB at x3, 2.92 dB at x5, 3.22 dB at x7, and 4.07 dB at x10. The largest gains appear at higher acceleration, where image-domain correction has the strongest effect on residual artifact removal.
+2. SSIM Performance
+SSIM evaluates structural integrity, specifically the ability to preserve the perceived quality of anatomical structures like edges and textures. Higher scores indicate more accurate reconstruction of breast tissue boundaries and potential lesions. The refined hybrid model also achieves the highest SSIM at every acceleration factor.
+
+
+Method
+	x3
+	x5
+	x7
+	x10
+	SwinMR
+	0.9520
+	0.9341
+	0.9162
+	0.8893
+	OUCR (baseline)
+	0.9915
+	0.9797
+	0.9625
+	0.9442
+	 K-Space Transformer (no image domain refinement)
+	0.9923
+	0.9801
+	0.9670
+	0.9492
+	K-Space Transformer (with image domain refinement)
+	0.9937
+	0.9820
+	0.9731
+	0.9594
+	Analysis of Results: The quantitative evaluation shows that the refinement stage improves structural fidelity while preserving the global reconstruction learned by the transformer. Compared with the no-refinement model, SSIM improves by 0.0014 at x3, 0.0019 at x5, 0.0061 at x7, and 0.0102 at x10. The gains are most visible at higher acceleration, where the image-domain module restores sharper edges and more coherent fibroglandular texture.
+5.8.2 Qualitative Assessment
+                                                      * Top Left (Input): The undersampled image shows characteristic coherent aliasing patterns (streaks) that mimic tissue structures, making diagnosis impossible.
+                                                      * Top Right (Ours): The k-space-only output removes the strongest streaking artifacts and restores the global breast anatomy, but some edges remain slightly soft and fine fibroglandular detail is still incomplete.
+                                                      * Bottom Left (Ground Truth): The image-domain refinement stage removes remaining ringing, sharpens the breast tissue boundaries, and restores local texture closer to the ground truth.
+                                                      * Bottom Right (Ground Truth): Comparing the refined output to the ground truth, the finest vascular details and sharp edges of the glandular tissue are more closely matched than in the k-space-only reconstruction.
+  
+
+	  
+
+	Undersampled Image
+	K-Space Transformer Output
+	
+
+
+
+  
+
+	  
+
+	Refined Output
+	Ground Truth
+	
+
+6. Future Improvements
+
+
+6.1 Architectural Adaptations for Breast MRI Heterogeneity
+Breast MRI poses unique challenges compared to other modalities due to the extreme variance in tissue density (fatty vs. dense fibroglandular). To further enhance the Refinement Module's effectiveness for this specific dataset, we will implement the following adaptation:
+A. Adaptive Query Density for Fibroglandular Regions - The current architecture queries k-space coordinates uniformly. However, the diagnostic value in breast MRI is concentrated in the fibroglandular tissue, which corresponds to specific high-frequency bands. We plan to modify the query generation mechanism to support Region-of-Interest (ROI) Weighted Sampling. By utilizing the initial coarse reconstruction from the Low-Resolution decoder, we can identify regions of high signal intensity (glandular tissue) and dynamically allocate a higher density of query tokens to these areas during the HR decoding stage. This ensures that the Refinement Module focuses its computational resources on resolving the fine margins of potential lesions rather than the uniform fatty background
+7. Conclusion
+In conclusion, this research project addresses the critical challenges associated with breast MRI super-resolution through the development of a specialized hybrid Deep Learning model. The completed pipeline combines a K-Space Transformer with image-domain refinement, which improves the final reconstruction by preserving global frequency structure while restoring local spatial detail. Quantitatively, the refinement stage raises PSNR from 37.02/34.57/31.94/28.36 dB to 38.81/37.49/35.16/32.43 dB and SSIM from 0.9923/0.9801/0.9670/0.9492 to 0.9937/0.9820/0.9731/0.9594 at x3, x5, x7, and x10 acceleration factors. The structured approach, comprehensive dataset, and rigorous validation demonstrate that hybrid k-space and image-domain modeling is a strong direction for clinically useful breast MRI reconstruction.
+
+
+
+
+8. References
+                                                      1. Kuhl, C. K., Schrading, S., Leutner, C. C., Morakkabati-Spitz, N., Wardelmann, E., Fimmers, R., ... & Schild, H. H. (2005). Mammography, breast ultrasound, and magnetic resonance imaging for surveillance of women at high familial risk for breast cancer. Journal of Clinical Oncology, 23(33), 8469-8476. https://doi.org/10.1200/JCO.2004.00.4960
+                                                      2. Safari, M., Eidex, Z., Chang, C.-W., Qiu, R. L. J., & Yang, X. (n.d.). Advancing MRI Reconstruction: A Systematic Review of Deep Learning and Compressed Sensing Integration.
+                                                      3. Knoll, F., Zbontar, J., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Recht, M.
+P. (2020). fastMRI: A publicly available raw k-space and DICOM dataset of knee images for accelerated MR image reconstruction using machine learning. Radiology: Artificial Intelligence, 2(1), e190007. https://doi.org/10.1148/ryai.2020190007
+                                                      4. Kalluvila, A. (n.d.). Super-Resolution of Brain MRI via U-Net Architecture. Athinoula Martinos Center, Harvard Medical School, Charleston, MA, and Hartford Union High School, WI.
+                                                      5. Aghabiglou, A., & Eksioglu, E. M. (n.d.). Projection-Based Cascaded U-Net Model for MR Image Reconstruction.
+                                                      6. Modanwal, G., Vellal, A., & Mazurowski, M. A. (n.d.). Normalization of Breast MRIs Using Cycle-Consistent Generative Adversarial Networks.
+                                                      7. Sauer, S. T., Christner, S. A., Lois, A.-M., Woznicki, P., Curtaz, C., Kunz, A. S., Weiland,
+E., Benkert, T., Bley, T. A., Baeßler, B., & Grunz, J.-P. (n.d.). Deep Learning
+k-Space-to-Image Reconstruction Facilitates High Spatial Resolution and Scan Time Reduction in Diffusion-Weighted Imaging Breast MRI.
+                                                      8. Okolie, A., Dirrichs, T., Huck, L. C., Nebelung, S., Arasteh, S. T., Nolte, T., Han, T., Kuhl, C. K., & Truhn, D. (n.d.). Accelerating Breast MRI Acquisition with Generative AI Models.
+                                                      9. Lo Gullo, R., van Veldhuizen, V., Roa, T., Kapetas, P., Teuwen, J., & Pinker, K. (n.d.). Application of Machine Learning to Breast MR Imaging.
+                                                      10. Sung, H., Ferlay, J., Siegel, R. L., Laversanne, M., Soerjomataram, I., Jemal, A., & Bray,
+F. (2021). Global Cancer Statistics 2020: GLOBOCAN estimates of incidence and mortality worldwide for 36 cancers in 185 countries. CA: A Cancer Journal for Clinicians, 71(3),
+209-249. https://doi.org/10.3322/caac.21660
+                                                      11. Lustig, M., Donoho, D., & Pauly, J. M. (2007). Sparse MRI: The application of compressed sensing for rapid MR imaging. Magnetic Resonance in Medicine, 58(6), 1182-1195. https://doi.org/10.1002/mrm.21391
+                                                      12. Griswold, M. A., Jakob, P. M., Heidemann, R. M., Nittka, M., Jellus, V., Wang, J., Kiefer, B., & Haase, A. (2002). Generalized autocalibrating partially parallel acquisitions (GRAPPA). Magnetic Resonance in Medicine, 47(6), 1202-1210. https://doi.org/10.1002/mrm.10171
+                                                      13. Knoll, F., Zbontar, J., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Recht,
+M. P. (2020). fastMRI: A publicly available raw k-space and DICOM dataset of knee images for accelerated MR image reconstruction using machine learning. Radiology: Artificial Intelligence, 2(1), e190007. https://doi.org/10.1148/ryai.2020190007
+                                                      14. Sandino, C. M., Lai, P., Vasanawala, S. S., & Cheng, J. Y. (2019). Accelerating cardiac cine MRI using a deep learning-based ESPIRiT reconstruction. Magnetic Resonance in Medicine, 82(1), 152-165. https://doi.org/10.1002/mrm.27727
+                                                      15. Kuhl, C. K., Schrading, S., Leutner, C. C., Morakkabati-Spitz, N., Wardelmann, E., Fimmers, R., ... & Schild, H. H. (2005). Mammography, breast ultrasound, and magnetic resonance imaging for surveillance of women at high familial risk for breast cancer. Journal of Clinical Oncology, 23(33), 8469-8476. https://doi.org/10.1200/JCO.2004.00.4960
+                                                      16. Mann, R. M., Cho, N., & Moy, L. (2019). Breast MRI: state of the art. Radiology, 292(3), 520-536. https://doi.org/10.1148/radiol.2019182947
+                                                      17. Feng, L., Grimm, R., Block, K. T., Chandarana, H., Kim, S., Xu, J., ... & Sodickson, D.
+K. (2014). Golden‐angle radial sparse parallel MRI: combination of compressed sensing, parallel imaging, and golden‐angle radial sampling for fast and flexible dynamic volumetric MRI. Magnetic Resonance in Medicine, 72(3), 707-717. https://doi.org/10.1002/mrm.24980
+                                                      18. Pineda, F. D., Medved, M., Wang, S., Fan, X., Schacht, D. V., Sennett, C., ... & Karczmar, G. S. (2016). Ultrafast bilateral DCE-MRI of the breast with conventional Fourier
+sampling: preliminary evaluation of semi-quantitative analysis. Academic Radiology, 23(9), 1137-1144. https://doi.org/10.1016/j.acra.2016.04.008
+                                                      19. Haldar, J. P., Hernando, D., & Liang, Z. P. (2011). Compressed-sensing MRI with random encoding. IEEE Transactions on Medical Imaging, 30(4), 893-903. https://doi.org/10.1109/TMI.2010.2085084
+                                                      20. Pruessmann, K. P., Weiger, M., Scheidegger, M. B., & Boesiger, P. (1999). SENSE: sensitivity encoding for fast MRI. Magnetic Resonance in Medicine, 42(5), 952-962. https://doi.org/10.1002/(SICI)1522-2594(199911)42:5<952::AID-MRM16>3.0.CO;2-S
+                                                      21. Sodickson, D. K., & Manning, W. J. (1997). Simultaneous acquisition of spatial harmonics (SMASH): fast imaging with radiofrequency coil arrays. Magnetic Resonance in Medicine, 38(4), 591-603. https://doi.org/10.1002/mrm.1910380414
+                                                      22. Candès, E. J., Romberg, J., & Tao, T. (2006). Robust uncertainty principles: Exact signal reconstruction from highly incomplete frequency information. IEEE Transactions on Information Theory, 52(2), 489-509. https://doi.org/10.1109/TIT.2005.862083
+                                                      23. Donoho, D. L. (2006). Compressed sensing. IEEE Transactions on Information Theory, 52(4), 1289-1306. https://doi.org/10.1109/TIT.2006.871582
+                                                      24. Wang, S., Su, Z., Ying, L., Peng, X., Zhu, S., Liang, F., ... & Liang, D. (2016). Accelerating magnetic resonance imaging via deep learning. In 2016 IEEE 13th international symposium on biomedical imaging (ISBI) (pp. 514-517). IEEE. https://doi.org/10.1109/ISBI.2016.7493320
+                                                      25. Hammernik, K., Klatzer, T., Kobler, E., Recht, M. P., Sodickson, D. K., Pock, T., & Knoll, F. (2018). Learning a variational network for reconstruction of accelerated MRI data.
+Magnetic Resonance in Medicine, 79(6), 3055-3071. https://doi.org/10.1002/mrm.26977
+                                                      26. LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. Nature, 521(7553), 436-444. https://doi.org/10.1038/nature14539
+                                                      27. Krizhevsky, A., Sutskever, I., & Hinton, G. E. (2012). ImageNet classification with deep convolutional neural networks. Advances in Neural Information Processing Systems, 25, 1097-1105. https://doi.org/10.1145/3065386
+                                                      28. He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. In Proceedings of the IEEE conference on computer vision and pattern recognition (pp. 770-778). https://doi.org/10.1109/CVPR.2016.90
+                                                      29. Ghodrati, V., Shao, J., Bydder, M., Zhou, Z., Yin, W., Nguyen, K. L., Yang, Y., & Hu, P. (n.d.). MR Image Reconstruction Using Deep Learning: Evaluation of Network Structure and Loss Functions.
+                                                      30. Cole, E., Cheng, J., Pauly, J., & Vasanawala, S. (n.d.). Analysis of Deep Complex-Valued Convolutional Neural Networks for MRI Reconstruction and Phase-Focused Applications.
+                                                      31. Aburass, S., Dorgham, O., Al Shaqsi, J., Abu Rumman, M., & Al-Kadi, O. (n.d.). Vision Transformers in Medical Imaging: A Comprehensive Review of Advancements and Applications Across Multiple Diseases.
+                                                      32. Chen, J., Lu, Y., Yu, Q., Luo, X., Adeli, E., Wang, Y., Lu, L., Yuille, A. L., & Zhou, Y. (n.d.). TransUNet: Transformers Make Strong Encoders for Medical Image Segmentation.
+                                                      33. Liu, Z., Lin, Y., Cao, Y., Hu, H., Wei, Y., Zhang, Z., Lin, S., & Guo, B. (n.d.). Swin Transformer: Hierarchical Vision Transformer Using Shifted Windows.
+                                                      34. Guo, P., Mei, Y., Zhou, J., Jiang, S., & Patel, V. M. (n.d.). ReconFormer: Accelerated MRI Reconstruction Using Recurrent Transformer.
+                                                      35. Halder, A., Gharami, S., Sadhu, P., Singh, P. K., Woźniak, M., & Ijaz, M. F. (n.d.). Implementing Vision Transformer for Classifying 2D Biomedical Images.
+                                                      36. Bangun, A., Cao, Z., Quercia, A., Scharr, H., & Pfaehler, E. (n.d.). MRI Reconstruction with Regularized 3D Diffusion Model (R3DM).
+                                                      37. Liao, S., Mo, Z., Zeng, M., Wu, J., Gu, Y., Li, G., Quan, G., Lv, Y., Liu, L., Yang, C.,
+Wang, X., Huang, X., Zhang, Y., Cao, W., Dong, Y., Wei, Y., Zhou, Q., Xiao, Y., Zhan, Y., Zhou, X. S., & Shen, D. (n.d.). Fast and Low-Dose Medical Imaging Generation Empowered by Hybrid Deep-Learning and Iterative Reconstruction.
+                                                      38. Zbontar, J., Knoll, F., Sriram, A., Murrell, T., Huang, Z., Muckley, M. J., Defazio, A., Stern, R., Johnson, P., Bruno, M., Parente, M., Geras, K. J., Katsnelson, J., Chandarana, H., Zhang, Z., Drozdzal, M., Romero, A., Rabbat, M., Vincent, P., Yakubova, N., Pinkerton, J., Wang, D., Owens, E., Zitnick, C. L., Recht, M. P., Sodickson, D. K., & Lui, Y. W. (n.d.). fastM        RI: An Open Dataset and Benchmarks for Accelerated MRI.
+                                                      39. Garrucho, L., et al. (n.d.). A Large-Scale Multicenter Breast Cancer DCE-MRI Benchmark Dataset with Expert Segmentations.
+                                                      40. Hyun CM, Kim HP, Lee SM, Lee S, Seo JK. Deep learning for undersampled MRI reconstruction. Phys Med Biol. 2018 Jun 25;63(13):135007. doi: 10.1088/1361-6560/aac71a.
+PMID: 29787383
+                                                      41. Zhao, Z., Zhang, T., Xie, W., Wang, Y., & Zhang, Y. (2022). K-Space Transformer for Undersampled MRI Reconstruction. ArXiv. https://arxiv.org/abs/2206.06947
+                                                      42. Zhang, K., Hu, H., Philbrick, K., Conte, G. M., Sobek, J. D., Rouzrokh, P., & Erickson,
+B. J. (2022). SOUP-GAN: Super-Resolution MRI Using Generative Adversarial Networks. Tomography, 8(2), 905-919. https://doi.org/10.3390/tomography8020073
+                                                      43. Zibetti, M. V., Herman, G. T., & Regatte, R. R. (2021). Fast data-driven learning of parallel MRI sampling patterns for large scale problems. Scientific Reports, 11(1), 1-19. https://doi.org/10.1038/s41598-021-97995-w
+                                                      44. Yiasemis, G., Sánchez, C. I., Sonke, J.-J., & Teuwen, J. (2023). On Retrospective
+𝑘-space Subsampling schemes For Deep MRI Reconstruction.
+                                                      45. Jaspan, O. N., Fleysher, R., & Lipton, M. L. (2015). Compressed sensing MRI: A review of the clinical literature. The British Journal of Radiology, 88(1056), 20150487. https://doi.org/10.1259/bjr.20150487
+                                                      46. Liu, J., & Saloner, D. (n.d.). Accelerated MRI with CIRcular Cartesian UnderSampling (CIRCUS): a variable density Cartesian sampling strategy for compressed sensing and parallel imaging. Department of Radiology and Biomedical Imaging, University of California San Francisco; Radiology Service, VA Medical Center.
+                                                      47. Gao, Z., Zhang, Y., Liu, X., Li, K., & Zhou, S. K. (2024). DuDoUniNeXt: Dual-domain unified hybrid model for single and multi-contrast undersampled MRI reconstruction. ArXiv. https://arxiv.org/abs/2403.05256
+                                                      48. Hong GQ, Wei YT, Morley WAW, Wan M, Mertens AJ, Su Y, Cheng HM. Dual-domain accelerated MRI reconstruction using transformers with learning-based undersampling. Comput Med Imaging Graph. 2023 Jun;106:102206. doi: 10.1016/j.compmedimag.2023.102206. Epub 2023 Feb 23. PMID: 36857952.
+                                                      49. L., M., Ippolito, G., A., T. P., Remis, R. F., Van Gijzen, M. B., & Webb, A. G. (2022). Deep learning-based single image super-resolution for low-field MR brain images. Scientific Reports, 12(1), 1-10. https://doi.org/10.1038/s41598-022-10298-6
+                                                      50. Liu, C., Wu, X., Yu, X., Tang, Y., Zhang, J., & Zhou, J. (2018). Fusing multi-scale information in convolution network for MR image super-resolution reconstruction. BioMedical Engineering OnLine, 17, 114. https://doi.org/10.1186/s12938-018-0546-9
+                                                      51. Tsai, C. C., Chen, X., Ahmad, S., & Yap, T. (2023). Robust Unsupervised
+Super-Resolution of Infant MRI via Dual-Modal Deep Image Prior. Machine Learning in Medical Imaging. MLMI (Workshop), 14348, 42.
+https://doi.org/10.1007/978-3-031-45673-2_5
+                                                      52. öhmen, M., Klemens, M. A., Baltruschat, I. M., Truong, T., & Lenga, M. (2025). Similarity and quality metrics for MR image-to-image translation. Scientific Reports, 15(1), 1-18. https://doi.org/10.1038/s41598-025-87358-0
+                                                      53. Adamson, P. M., Desai, A. D., Dominic, J., Varma, M., Bluethgen, C., Wood, J. P., Syed,
+A. B., Boutin, R. D., Stevens, K. J., Vasanawala, S., Pauly, J. M., Gunel, B., & Chaudhari, A.
+S. (Year). Using deep feature distances for evaluating the perceptual quality of MR image reconstructions. Journal Name, Volume(Issue), Page numbers.
+                                                      54. Cai, L., Gao, J., & Zhao, D. (2020). A review of the application of deep learning in medical image classification and segmentation. Annals of Translational Medicine, 8(11), 713. https://doi.org/10.21037/atm.2020.02.44
+                                                      55. Wood, D. A., Townend, M., Guilhem, E., Kafiabadi, S., Hammam, A., Wei, Y., Busaidi,
+A. A., Mazumder, A., Sasieni, P., Barker, G. J., Ourselin, S., Cole, J. H., & Booth, T. C. (2024). Optimising brain age estimation through transfer learning: A suite of pre‐trained foundation models for improved performance and generalisability in a clinical setting.
+Human Brain Mapping, 45(4), e26625. https://doi.org/10.1002/hbm.26625
+                                                      56. TorchIO-project. "torchio." GitHub. Accessed August 8, 2025. https://github.com/TorchIO-project/torchio.
+                                                      57. Ruberry, M., Bell, P., & Spisak, J. (2021, March 3). The torch.fft module: Accelerated fast Fourier transforms with autograd in PyTorch. PyTorch Blog.
+https://pytorch.org/blog/the-torch-fft-module-accelerated-fast-fourier-transforms-with-autogr ad-in-pytorch/#:~:text=Performance
+                                                      58. Muckley, M. J., Riemenschneider, B., Radmanesh, A., Kim, S., Jeong, G., Ko, J., Jun, Y., Shin, H., Hwang, D., Mostapha, M., Arberet, S., Nickel, D., Ramzi, Z., Ciuciu, P., Starck, L., Teuwen, J., Karkalousos, D., Zhang, C., Sriram, A., . . . Knoll, F. (2021). Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction. IEEE Transactions on Medical Imaging, 40(9), 2306. https://doi.org/10.1109/TMI.2021.3075856
+                                                      59. Schlemper, J., Caballero, J., Hajnal, J. V., Price, A., & Rueckert, D. (2017). A Deep Cascade of Convolutional Neural Networks for Dynamic MR Image Reconstruction. ArXiv. https://arxiv.org/abs/1704.02422
+                                                      60. Hammernik, K., Klatzer, T., Kobler, E., Recht, M. P., Sodickson, D. K., Pock, T., & Knoll, F. (2017). Learning a Variational Network for Reconstruction of Accelerated MRI Data. ArXiv. https://arxiv.org/abs/1704.00447
+                                                      61. Rahman, M. M., & Marculescu, R. (2023). Multi-scale Hierarchical Vision Transformer with Cascaded Attention Decoding for Medical Image Segmentation. ArXiv. https://arxiv.org/abs/2303.16892
+                                                      62. Huang, J., Fang, Y., Wu, Y., Wu, H., Gao, Z., Li, Y., Del Ser, J., Xia, J., & Yang, G. (2022). Swin Transformer for Fast MRI. ArXiv. https://arxiv.org/abs/2201.03230
+                                                      63. Zheng, Q., Zheng, L., Deng, J., Li, Y., Shang, C., & Shen, Q. (2023). Transformer-based hierarchical dynamic decoders for salient object detection. Knowledge-Based Systems, 282, 111075. https://doi.org/10.1016/j.knosys.2023.111075
