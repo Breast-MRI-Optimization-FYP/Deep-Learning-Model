@@ -1,31 +1,317 @@
-Implementation of a Transformer model operating within the k-space domain for breast MRI optimization. The repository was built incrementally following a modular approach, with each subsystem designed as an independent component that can be tested, profiled, and improved in isolation.
+# A K-Space Deep Learning Model for Breast MRI Super-Resolution to Enhance Diagnostic Quality
+
+**Authors:** Weerasinghe M.S.S , Jayasinghe C.H , Jayasooriya J.M.D.C
+
+**Supervisors:** Dr. Charith Chitraranjan (internal), Dr. Isuru Wijesinghe (external)
+
+---
+
+## Abstract
+
+Magnetic Resonance Imaging (MRI) is essential for breast cancer diagnosis, but high-resolution scans require long acquisition times that increase patient discomfort and motion artifact risk. K-space undersampling reduces scan duration but introduces aliasing artifacts and loss of diagnostic detail. Convolutional Neural Networks (CNNs), while effective in image-domain reconstruction, are poorly suited to k-space data because they rely on local receptive fields and translation invariance, whereas MRI artifacts are global frequency-domain phenomena. This work implements a K-Space Transformer that treats undersampled MRI reconstruction as a coordinate-query problem in frequency space, using Implicit Neural Representation (INR) with sinusoidal positional encoding, a hierarchical Low-Resolution (LR) to High-Resolution (HR) decoder, and an image-domain CNN refinement module with k-space data consistency. The model is trained on T1-weighted fat-saturated breast MRI from the Duke Breast MRI dataset (50 patients, 320×320 k-space) under retrospective undersampling at acceleration factors ×3, x5, x7,×10. A three-stage training schedule (LR → HR → refinement) with dual-domain deep supervision converges stably despite loss spikes at stage transitions. Quantitative evaluation against OUCR and SwinMR baselines shows that the hybrid model with image-domain refinement achieves the best PSNR and SSIM at all tested acceleration factors (e.g., PSNR 32.43 dB and SSIM 0.9594 at ×10), outperforming OUCR on SSIM across all factors and on PSNR at moderate accelerations (×3–×7). Qualitative results confirm effective artifact removal and restoration of fibroglandular tissue detail. These findings demonstrate that hybrid k-space and image-domain modeling is a strong direction for clinically useful accelerated breast MRI reconstruction.
+
+---
 
 ## Table of Contents
 
-- [1. Project Objective](#1-project-objective)
-- [2. Requirements](#2-requirements)
-- [3. Setup](#3-setup)
-- [4. Repository Architecture](#4-repository-architecture)
-- [5. Data Expectations](#5-data-expectations)
-- [6. Model Architecture](#6-model-architecture)
-- [7. Performance-Oriented Features](#7-performance-oriented-features)
-- [8. Command Line Workflows](#8-command-line-workflows)
-- [9. Reproducibility and Validation](#9-reproducibility-and-validation)
-- [10. Incremental Modular Build Strategy](#10-incremental-modular-build-strategy)
-- [11. Notes for Breast MRI Experiments](#11-notes-for-breast-mri-experiments)
+- [1. Introduction](#1-introduction)
+- [2. Related Work](#2-related-work)
+- [3. Methodology](#3-methodology)
+  - [3.1 Dataset and Preprocessing](#31-dataset-and-preprocessing)
+  - [3.2 K-Space Tokenization](#32-k-space-tokenization)
+  - [3.3 Model Architecture](#33-model-architecture)
+  - [3.4 Training Strategy and Loss Functions](#34-training-strategy-and-loss-functions)
+- [4. Implementation](#4-implementation)
+- [5. Experiments and Results](#5-experiments-and-results)
+  - [5.1 Experimental Setup](#51-experimental-setup)
+  - [5.2 Quantitative Results](#52-quantitative-results)
+  - [5.3 Training Dynamics](#53-training-dynamics)
+  - [5.4 Qualitative Results](#54-qualitative-results)
+- [6. Discussion and Conclusion](#6-discussion-and-conclusion)
+- [7. Code vs Research Configuration](#7-code-vs-research-configuration)
+- [8. Reproducibility and Usage](#8-reproducibility-and-usage)
+- [9. References](#9-references)
 
-## 1. Project Objective
+---
 
-The primary objective is breast MRI optimization through high-fidelity reconstruction from undersampled k-space data. The system targets stable improvements in reconstruction quality (PSNR, SSIM) while maintaining practical runtime and memory behavior.
+## 1. Introduction
 
-Research goals:
+Breast cancer remains the most prevalent cancer among women globally, and Magnetic Resonance Imaging (MRI) serves as a cornerstone for diagnosis in high-risk patients. MRI provides high-resolution, radiation-free images with excellent soft-tissue contrast, but the lengthy scan times required for detailed breast imaging often exceed one hour, leading to patient discomfort and increased susceptibility to motion artifacts. Accelerated acquisition via k-space undersampling can reduce scan times to under 20 minutes, but it transforms image reconstruction into an ill-posed inverse problem. Incomplete k-space coverage causes aliasing artifacts and loss of fine anatomical detail critical for distinguishing benign from malignant lesions.
 
-- improve breast MRI reconstruction quality from limited k-space samples,
-- preserve physically consistent k-space/image-domain relationships,
-- support reproducible staged training and evaluation,
-- provide measurable acceptance criteria for candidate model updates.
+The fundamental relationship between k-space and the image domain is expressed as $x = \mathcal{F}^{-1}(k)$, where $x$ is the reconstructed image, $\mathcal{F}^{-1}$ is the inverse Fourier transform, and $k$ is the k-space data. Central k-space regions encode low spatial frequencies (contrast and signal to noise ratio), while peripheral regions capture high frequencies (spatial resolution and fine detail). Undersampling patterns therefore directly influence the balance between contrast preservation and detail retention.
 
-## 2. Requirements
+Traditional reconstruction methods such as Parallel Imaging (SENSE, GRAPPA) and Compressed Sensing (CS) are limited by fixed mathematical priors and struggle under high acceleration factors. Deep Learning (DL) has emerged as a powerful alternative, but the majority of existing models particularly CNN based U-Nets operate in the image domain. CNNs rely on local receptive fields and the assumption of translation invariance, which are suboptimal for k-space data where spatial information is distributed across frequency components and accurate reconstruction requires capturing long range dependencies between distant frequency bins.
+
+This research addresses this gap by implementing a K-Space Transformer framework tailored for breast MRI reconstruction. The model adopts an Implicit Neural Representation (INR), treating the k-space spectrogram as a continuous function where spatial coordinates are queried to reconstruct missing frequency data. Global self attention mechanisms capture non local dependencies essential for aliasing artifact removal. To manage computational complexity, a hierarchical decoder structure processes data through LR and HR stages, recovering both anatomical structure and fine lesion morphology. An image-domain refinement module with k-space data consistency further restores local spatial detail that pure frequency-domain decoding cannot fully capture.
+
+The scope of this work is limited to T1-weighted fat-saturated breast MRI central slices from the Duke Breast MRI dataset, evaluated at acceleration factors ×3, ×5, ×7, and ×10 using Peak Signal-to-Noise Ratio (PSNR) and Structural Similarity Index (SSIM) metrics against OUCR and SwinMR baselines.
+
+![Deep learning vs compressed sensing acceleration ranges](Results/reconstruction%20methods%20and%20acceleration%20rates.jpg)
+
+*Figure 1. Reconstruction method families and typical acceleration ranges.*
+
+---
+
+## 2. Related Work
+
+Deep learning for MRI reconstruction has progressed through several architectural paradigms, each with distinct tradeoffs for breast imaging applications.
+
+**Convolutional approaches.** CNN-based methods, particularly U-Net architectures with encoder-decoder structures and skip connections, form the foundation of modern DL MRI reconstruction. Residual learning, attention mechanisms, and dual-domain networks that alternate between k-space and image processing have extended CNN capabilities. However, CNNs remain fundamentally constrained by local receptive fields when applied directly to k-space data.
+
+**Transformer approaches.** Vision Transformers (ViTs) and specialized MRI reconstruction transformers such as ReconFormer enable superior modeling of long-range dependencies through self-attention. The K-Space Transformer treats k-space coordinates as continuous query points with sinusoidal positional encoding, moving beyond discrete grid constraints. SwinMR applies shifted-window attention for efficient high-resolution MRI reconstruction.
+
+**Hybrid k-space and image-domain methods.** Purely k-space or latent-domain transformers often produce residual artifacts and loss of fine anatomical detail. Hybrid strategies that combine frequency-domain processing with image-domain refinement, exemplified by Deep Cascade CNNs (DC-CNN), Variational Networks and SwinMR variants demonstrate that alternating k-space consistency enforcement with spatial-domain correction improves reconstruction quality under aggressive undersampling.
+
+**Breast MRI-specific gap.** Despite progress in general MRI reconstruction, breast MRI remains underrepresented in the DL landscape. The unique characteristics of breast tissue dense fibroglandular structures, variable breast density patterns, and spatial heterogeneity, introduce domain-specific challenges that generic models inadequately address. Data scarcity (the fastMRI dataset contains only 300 3D breast scans) and limited investigation of hybrid architectures for 2D k-space breast MRI protocols further constrain specialized model development.
+
+This work contributes a breast-specific K-Space Transformer with hierarchical decoding and image-domain refinement, evaluated comprehensively against established baselines across multiple acceleration factors.
+
+---
+
+## 3. Methodology
+
+### 3.1 Dataset and Preprocessing
+
+**Data source.** The Duke Breast MRI dataset comprises complex, 3D dynamic contrast-enhanced volumes from 50 patients. Central slices from T1-weighted fat-saturated sequences were extracted to ensure representative balance of fibroglandular tissue and fatty background while minimizing coil sensitivity profile effects at volume edges.
+
+**Preprocessing pipeline.** Raw MRI data in H5 format undergoes four stages before training:
+
+1. **K-space extraction and normalization.** K-space data is center-cropped to 320×320 pixels, converted from complex values to 2-channel `[real, imaginary]` representation, transformed to image domain via centered IFFT, per-slice normalized to zero mean and unit variance $\text{normalized} = (\text{image} - \mu) / \sigma$, transformed back to k-space via FFT, and filtered by variance (lowest 20% variance slices removed). Output: `k_data.npy` with shape `[N, 320, 320, 2]`.
+
+2. **Low-resolution generation.** HR k-space is converted to image domain (IFFT), downsampled via 2× average pooling (stride 2), and converted back to k-space (FFT). Output: `LR_k_data.npy` with shape `[N, 160, 160, 2]`.
+
+3. **Undersampling mask generation.** Six clinically relevant mask types are generated with stochastic variation: Cartesian equispaced, Cartesian random, variable-density Cartesian, uniform radial, variable-density radial, and spiral. All masks fully sample central k-space (~8% of lines). Output: `combined_masks.npy` with shape `[60, 320, 320]`.
+
+4. **Dataset partitioning.** Data is split 70% training, 15% validation, and 15% test at the patient level with identical HR/LR correspondence across splits.
+
+In-repo tooling covers stages 2 and 4 via `kst-preprocess` and `kst-split`. Raw H5 extraction and mask generation are performed externally.
+
+![Preprocessing pipeline overview](Results/Preprocessing%20Pipeline%20Summary.jpg)
+
+*Figure 2. End-to-end preprocessing pipeline: raw H5 → k_data.npy → LR_k_data.npy → combined_masks.npy → train/valid/test splits.*
+
+![LR k-space generation](Results/LR%20data%20generation.jpg)
+
+*Figure 3. Low-resolution k-space generation: HR k-space → IFFT → 2× average pooling → FFT.*
+
+| Array | Shape | Description |
+|-------|-------|-------------|
+| HR k-space | `[N, 320, 320, 2]` | Fully sampled ground truth |
+| LR k-space | `[N, 160, 160, 2]` | Coarse supervision target |
+| Mask bank | `[60, 320, 320]` | Retrospective undersampling patterns |
+
+Split outputs: `train_k.npy`, `valid_k.npy`, `test_k.npy`, corresponding `*_lr_k.npy` files, and `split_indices.npz`.
+
+### 3.2 K-Space Tokenization
+
+Unlike CNNs that ingest fixed grids, the K-Space Transformer processes a sequence of available k-space points. For each training sample, a random undersampling mask is applied to HR k-space. Sampled points and their 2D spatial frequency coordinates form encoder input tokens; unsampled coordinates serve as HR decoder queries.
+
+Each token is defined as a tuple $(v, p)$ where $v$ is the sampled complex value (real/imaginary channels) and $p$ is the normalized 2D coordinate in $[0,1] \times [0,1]$. Sinusoidal positional encoding with `magnify=250` is applied to coordinates before summation with the MLP embedding of k-space values. This coordinate based tokenization supports non-Cartesian and arbitrary sampling patterns dynamically.
+
+Variable-length token sequences are truncated to `max_seq_len=8000` and padded by `KSpaceCollator` for batch processing. Masks are randomly reassigned during training (default: every epoch) for data augmentation. Implementation: [`data/tokenize.py`](data/tokenize.py), [`data/datasets.py`](data/datasets.py).
+
+### 3.3 Model Architecture
+
+The `KSpaceTransformer` model ([`model/transformer.py`](model/transformer.py)) learns a continuous function mapping spatial coordinates to k-space values, conditioned on observed samples.
+
+**Encoder (4 layers, $d_\text{model}=256$, 4 heads).** Sampled k-space values are embedded via a learnable MLP and summed with sinusoidal positional encoding. Four transformer encoder layers apply multi-head self-attention (MHSA) and feed-forward networks (FFN) with residual connections, capturing global dependencies between frequency bins critical for aliasing artifact modeling.
+
+**LR Decoder (4 layers).** Queries are generated from normalized positional coordinates of a 64×64 downsampled grid (`lr_size=64`). Each layer applies multi-head cross-attention (MHCA) to encoder memory followed by MHSA. Per-layer complex value predictions are reshaped and transformed via IFFT to image-domain outputs with deep supervision at each layer.
+
+**HR Decoder (6 layers).** Upsampled LR decoder output serves as context (key/value). To minimize memory consumption, HR layers retain only cross-attention and FFN (no self-attention). Unsampled k-space coordinates are queried to predict complex values, inserted into masked k-space via `fill_in_k()`, and transformed to image domain via IFFT at each layer.
+
+**Image-Domain Refinement Module (RM stage).** Active only during the refinement training stage, this module receives HR decoder output, applies differentiable IFFT, processes through a CNN stack (LeakyReLU activations, 64 mid-channels, 3×3 kernels), and transforms back to k-space via FFT. Data consistency is enforced: $k_\text{out} = k_\text{rec} \odot m + k_\text{sampled}$, where $m$ is the undersampling mask. Refined output is fed back into the next HR layer via `conv_weight`-scaled embedding. Implementation: [`model/blocks.py`](model/blocks.py).
+
+![Encoder architecture](Results/Encoder%20Architecture.jpg)
+
+*Figure 4. K-Space Transformer encoder: MLP embedding + positional encoding → N× self-attention layers.*
+
+![Decoder architecture with image-domain refinement](Results/Decoder%20Architecture%20%28With%20Image%20Domain%20Refinement%29.jpg)
+
+*Figure 5. Hierarchical decoder: 1. LR decoder (cross+self-attention) 2. HR decoder (cross-attention + refinement module).*
+
+| Parameter | Default |
+|-----------|---------|
+| `d_model` | 256 |
+| `n_head` | 4 |
+| Encoder / LR / HR layers | 4 / 4 / 6 |
+| `dim_feedforward` | 1024 |
+| `lr_size` | 64 |
+| `batch_size` | 4 |
+| `max_seq_len` | 8000 |
+| `lr` (AdamW) | 5e-4 |
+| Optimizer schedule | Cosine annealing |
+
+Defaults defined in [`config/schema.py`](config/schema.py).
+
+### 3.4 Training Strategy and Loss Functions
+
+A three-stage progressive training schedule ([`training/stage.py`](training/stage.py)) targets coarse-to-fine reconstruction:
+
+| Stage | Research Epochs | Code Defaults | Active Modules | Objective |
+|-------|----------------|---------------|----------------|-----------|
+| LR | 1–50 | 1–50 | Encoder + LR decoder | Coarse 160×160 structure |
+| HR | 51–150 | 51–100 | + HR decoder | Full 320×320 k-space |
+| RM | 151–310 | 101–200 | + CNN refinement | Spatial artifact removal |
+
+**Stage 1 (LR).** Encoder and LR decoder are supervised with 160×160 targets. HR decoder outputs are zeroed and remain untrained.
+
+**Stage 2 (HR).** HR decoder is supervised with 320×320 targets. Encoder and LR decoder continue training to maintain coarse representation integrity.
+
+**Stage 3 (RM).** Refinement module is supervised with high resolution image-domain targets. All components remain active so global frequency recovery and local spatial correction stay aligned.
+
+**Dual-domain deep supervision.** The total loss aggregates weighted Mean Squared Error (MSE) across all active decoder layers in both k-space and image domains simultaneously, providing complementary supervision for frequency accuracy and spatial coherence.
+
+![LR stage loss](Results/LR%20Stage%20Loss%20Function.jpg)
+
+*Figure 6. LR stage: weighted dual-domain MSE over 4 decoder layers (8 terms).*
+
+![HR stage loss part 1](Results/Total%20loss%20in%20HR%20stage%20-%20part%201.jpg)
+![HR stage loss part 2](Results/Total%20loss%20in%20HR%20stage%20-%20part%202.jpg)
+
+*Figure 7. HR stage: LR terms + 6 HR layer dual-domain MSE (20 terms total).*
+
+![Refinement stage loss](Results/Refinement%20Stage%20Loss%20Function.jpg)
+
+*Figure 8. Refinement stage composite loss: $\lambda_1 \mathcal{L}_{L1} + \lambda_2 \mathcal{L}_\text{Perceptual} + \lambda_3 \mathcal{L}_\text{SSIM}$.*
+
+---
+
+## 4. Implementation
+
+The repository (`kspace-transformer` v0.1.0) implements the research pipeline as modular, testable research software. Each subsystem data processing, model design, training, inference, validation, and CLI orchestration is separated into dedicated modules.
+
+```text
+.
+├── cli/          # Executable workflows: train/test/preprocess/split/parity
+├── config/       # Typed runtime schema, defaults, CLI argument binding
+├── data/         # Tokenization, masks, grids, datasets, LR generation, split pipeline
+├── inference/    # Inference runner and stage-aware evaluation path
+├── model/        # Transformer, attention, decoders, refinement blocks
+├── training/     # Trainer engine, stage scheduler, losses, metrics, checkpoints
+├── utils/        # FFT utilities, device helpers, seed control, runtime tracker
+├── validation/   # Parity comparison and acceptance gate logic
+├── tests/        # Unit/integration/smoke coverage (17 test modules)
+├── Results/      # Report, figures, comparison tables, reconstruction images
+├── pyproject.toml
+└── README.md
+```
+
+**Key design patterns:**
+
+- Strict data contracts with validation: `TokenizedSample`, `ForwardOutputs`, `LossBreakdown`, `BatchTensors`
+- Stage-aware forward pass: model behavior changes by training stage (HR outputs zeroed in LR stage; CNN skipped in HR stage)
+- Adaptive mask reassignment during training for augmentation
+- Sequence length control for tokenized sampled/unsampled streams
+- AdamW optimization with cosine learning rate schedule
+- Checkpoint lifecycle (`last.pth`, `best_valid_psnr.pth`)
+- TensorBoard metric logging with collision-safe keys
+- Runtime and peak-memory telemetry in workflow summaries
+- Parity regression gate (`kst-parity`) comparing baseline vs candidate runs
+
+Install the package with `pip install -e .` and run the test suite with `python -m pytest -q`.
+
+---
+
+## 5. Experiments and Results
+
+### 5.1 Experimental Setup
+
+**Baselines.** OUCR (Over/Under complete Convolutional RNN) serves as the primary baseline. SwinMR provides a transformer-based reference benchmark.
+
+**Metrics.** Peak Signal-to-Noise Ratio (PSNR, dB) measures signal fidelity; Structural Similarity Index (SSIM) evaluates preservation of anatomical structure, edges, and textures.
+
+**Acceleration factors.** Models are evaluated at ×3, ×5, ×7, and ×10 undersampling using 60 retrospective masks spanning six sampling pattern types.
+
+**Hardware.** Training was conducted on an NVIDIA RTX PRO 6000 GPU (RunPod). Total project compute cost was approximately ~$300 during the training time (310 epochs at 20–30 minutes per epoch).
+
+**Best model inference.** Reported results for the full hybrid model use the refinement stage `RM` (refinement module active).
+
+### 5.2 Quantitative Results
+
+**PSNR (dB):**
+
+| Method | ×3 | ×5 | ×7 | ×10 |
+|--------|-----|-----|-----|-----|
+| SwinMR | 31.51 | 30.36 | 29.21 | 27.48 |
+| OUCR (baseline) | 38.47 | 36.78 | 34.25 | 31.61 |
+| K-Space Transformer (no refinement) | 37.02 | 34.57 | 31.94 | 28.36 |
+| **K-Space Transformer (with refinement)** | **38.81** | **37.49** | **35.16** | **32.43** |
+
+**SSIM:**
+
+| Method | ×3 | ×5 | ×7 | ×10 |
+|--------|------|------|------|------|
+| SwinMR | 0.9520 | 0.9341 | 0.9162 | 0.8893 |
+| OUCR (baseline) | 0.9915 | 0.9797 | 0.9625 | 0.9442 |
+| K-Space Transformer (no refinement) | 0.9923 | 0.9801 | 0.9670 | 0.9492 |
+| **K-Space Transformer (with refinement)** | **0.9937** | **0.9820** | **0.9731** | **0.9594** |
+
+**Analysis.** Image-domain refinement provides increasing PSNR gains over the k-space-only model as acceleration increases: +1.79 dB (×3), +2.92 dB (×5), +3.22 dB (×7), and +4.07 dB (×10). SSIM gains follow the same trend (+0.0014 to +0.0102). The hybrid model with refinement beats OUCR on SSIM at all acceleration factors and on PSNR at ×3 (+0.34 dB), ×5 (+0.71 dB), and ×7 (+0.91 dB); at ×10, PSNR is 0.82 dB below OUCR while SSIM remains superior (0.9594 vs 0.9442). The k-space-only variant already exceeds OUCR on SSIM at all factors but lags on PSNR at high acceleration, confirming that refinement closes the spatial fidelity gap. Both variants substantially outperform SwinMR across all metrics and acceleration factors.
+
+![PSNR performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20PSNR.jpg)
+
+*Figure 9. PSNR comparison at ×10 acceleration.*
+
+![SSIM performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20SSIM.jpg)
+
+*Figure 10. SSIM comparison across ×3 to ×10 acceleration factors.*
+
+### 5.3 Training Dynamics
+
+During the LR stage (epochs 1–50), MSE loss declines steadily for both training and validation sets, reaching a local plateau near train 0.03 / val 0.035 by epoch 50. At the LR→HR transition (epoch 51), a significant loss spike occurs as the loss function expands from 8 to 20 terms; the model must simultaneously predict unsampled k-space points and optimize six additional HR decoder layers. The model adapts rapidly (epochs 51–80) by building on established LR representations, then converges smoothly to final HR MSE values of approximately 0.018 (train) and 0.023 (validation).
+
+During the refinement stage, the model is trained exclusively using a composite loss function (L1 + Perceptual + SSIM). Initial loss values for this stage begin at approximately 0.8 for training and 0.85 for validation. Over the course of the 160 epochs, both metrics exhibit a steady decline, ultimately converging to approximately 0.156 (train) and 0.204 (validation) by epoch 310. This optimization trajectory demonstrates successful learning of spatial artifact suppression while effectively preserving k-space consistency.
+
+![Dual-stage MSE loss curve](Results/dual_stage_mse_loss_curve.png)
+
+*Figure 11. LR + HR stage MSE loss (epochs 0–150). Spike at epoch 51 reflects 8→20 loss terms; final val MSE ≈ 0.023.*
+
+![Refinement stage composite loss](Results/refinement_stage_composite_loss_curve.png)
+
+*Figure 12. Refinement stage composite loss (epochs 150–310); final val ≈ 0.204.*
+
+### 5.4 Qualitative Results
+
+| (a) Undersampled input | (b) K-space Transformer (no refinement) |
+|:---:|:---:|
+| <img src="Results/Reconstructed%20Images/Undersampled%20Image.jpg" width="250px" alt="Undersampled"> | <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28Without%20Image%20Domain%20Refinement%29.jpg" width="250px" alt="No refinement"> |
+| **(c) With image-domain refinement** | **(d) Ground truth** |
+| <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28With%20Image%20Domain%20Refinement%29.png" width="250px" alt="With refinement"> | <img src="Results/Reconstructed%20Images/Ground%20Truth.jpg" width="250px" alt="Ground truth"> |
+
+*Figure 13. Qualitative reconstruction on a representative breast MRI slice at undersampled acquisition. (a) Coherent aliasing streaks obscure tissue structure. (b) Global anatomy restored; relatively soft edges, incomplete fine detail. (c) Sharper boundaries, reduced ringing, improved fibroglandular texture. (d) Fully sampled reference.*
+
+---
+
+## 6. Discussion and Conclusion
+
+**Findings.** This work demonstrates that a hybrid K-Space Transformer with image-domain refinement effectively reconstructs undersampled breast MRI across acceleration factors ×3 to ×10. The coordinate-query formulation with INR-style positional encoding captures global frequency dependencies that CNN-only approaches miss. The hierarchical LR→HR decoder reduces computational complexity while enabling coarse-to-fine learning. Three-stage training converges stably despite expected loss spikes at stage transitions, validating the progressive resolution strategy. Image-domain refinement preserves the global frequency structure learned during HR training while restoring local spatial detail, with the largest quantitative gains at the highest acceleration factors where residual artifacts are most severe.
+
+**Limitations.** Evaluation is limited to a single dataset (50 patients, 2D central slices), T1-weighted sequences only, and retrospective undersampling simulation. No clinical reader study or regulatory validation was performed. The current codebase defaults differ from the research training configuration that produced the reported results (see Section 7). Generalization to other institutions, sequences (T2, DWI), and 3D volumetric data remains untested.
+
+**Conclusion.** Hybrid k-space and image-domain modeling is a strong direction for clinically useful accelerated breast MRI reconstruction. The complete pipeline—from preprocessing through three-stage training to quantitative and qualitative evaluation—provides a reproducible foundation for further optimization and downstream clinical integration.
+
+Full project report: [`Results/Project_Final_Report_Group32_draft.pdf`](Results/Project_Final_Report_Group32_draft.pdf)
+
+---
+
+## 7. Code vs Research Configuration
+
+The reported results in Section 5 were produced with a research training configuration that differs from the codebase defaults in several aspects. Users reproducing or extending this work should be aware of these differences.
+
+| Aspect | Research (reported results) | Codebase default |
+|--------|----------------------------|------------------|
+| Total epochs | 310 | 200 |
+| Stage boundaries | LR 50 / HR 100 / RM 160 | LR 50 / K 50 / RM 100 |
+| CNN refinement depth | 5 conv layers | 4 conv + 1×1 output |
+| Mask generation | 60 masks, 6 types | Expects `combined_masks.npy` |
+
+
+---
+
+## 8. Reproducibility and Usage
+
+### 8.1 Requirements
 
 - Python `>=3.10,<3.14`
 - NumPy `>=2.1,<3.0`
@@ -35,13 +321,9 @@ Research goals:
 - TensorBoard `>=2.15,<3.0`
 - tqdm `>=4.66,<5.0`
 
-Optional development tools:
+Optional development tools: pytest, pytest-cov, ruff, mypy
 
-- pytest, pytest-cov, ruff, mypy
-
-## 3. Setup
-
-### 3.1 Environment
+### 8.2 Environment Setup
 
 ```bash
 python -m venv .venv
@@ -55,8 +337,6 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3.2 Installation
-
 Runtime install:
 
 ```bash
@@ -69,95 +349,11 @@ Development install:
 python -m pip install -e ".[dev]"
 ```
 
-## 4. Repository Architecture
+### 8.3 Command Line Workflows
 
-```text
-.
-├── cli/          # Executable workflows: train/test/preprocess/split/parity
-├── config/       # Typed runtime schema, defaults, CLI argument binding
-├── data/         # Tokenization, masks, grids, datasets, LR generation, split pipeline
-├── inference/    # Inference runner and stage-aware evaluation path
-├── model/        # Transformer, attention, decoders, refinement blocks
-├── training/     # Trainer engine, stage scheduler, losses, metrics, checkpoints
-├── utils/        # FFT utilities, device helpers, seed control, runtime tracker
-├── validation/   # Parity comparison and acceptance gate logic
-├── tests/        # Unit/integration/smoke coverage
-├── pyproject.toml
-└── README.md
-```
+Entrypoints: `kst-preprocess`, `kst-split`, `kst-train`, `kst-test`, `kst-parity`
 
-## 5. Data Expectations
-
-### 5.1 Core Arrays
-
-- HR k-space array: shape `[N, H, W, 2]`, `float32`
-- LR k-space array: shape `[N, h, w, 2]`, `float32`
-- Mask bank: shape `[M, H, W]` or `[M, H, W, 2]`
-
-### 5.2 Split Outputs
-
-The split workflow writes:
-
-- `train_k.npy`, `valid_k.npy`, `test_k.npy`
-- `train_lr_k.npy`, `valid_lr_k.npy`, `test_lr_k.npy`
-- `split_indices.npz`
-
-## 6. Model Architecture
-
-### 6.1 Input/Output Representation
-
-- Complex-valued tensors are represented with two channels: `[..., 2]` for real/imaginary parts.
-- Frequency/image transforms use centered FFT/IFFT utilities.
-- Sampled and unsampled token streams are built from masked k-space coordinates.
-
-### 6.2 Core Network Structure
-
-The model (`KSpaceTransformer`) combines:
-
-1. Transformer encoder over sampled k-space tokens.
-2. LR decoder predicting low-resolution image-space outputs.
-3. HR decoder predicting unsampled high-resolution k-space/image outputs.
-4. CNN refinement blocks with data consistency in the RM stage.
-
-The architecture includes positional encoding, multi-head attention, feed-forward transformer blocks, and stage-aware HR refinement.
-
-### 6.3 Stage-Wise Learning Flow
-
-Training progresses through three stages:
-
-- `LR`: low-resolution reconstruction learning,
-- `K`: high-resolution transformer prediction without refinement,
-- `RM`: transformer + CNN refinement with data consistency.
-
-Stage scheduling controls active losses, convolutional refinement weight, and evaluation interval per stage.
-
-## 7. Performance-Oriented Features
-
-Implemented features that improve reconstruction quality, stability, or efficiency include:
-
-- stage-aware weighted loss computation for LR/HR/RM outputs,
-- strict runtime configuration and shape/data contract validation,
-- deterministic seeding for reproducibility,
-- adaptive mask reassignment during training,
-- sequence-length control for tokenized sampled/unsampled streams,
-- data-consistency enforcement in refinement blocks,
-- AdamW optimization with cosine learning-rate schedule,
-- checkpoint lifecycle (`last` and best-by-PSNR),
-- TensorBoard metric logging with collision-safe metric keys,
-- runtime and peak-memory telemetry in workflow summaries,
-- parity gate comparing baseline vs candidate runs with metric and resource thresholds.
-
-## 8. Command Line Workflows
-
-Entrypoints:
-
-- `kst-preprocess`
-- `kst-split`
-- `kst-train`
-- `kst-test`
-- `kst-parity`
-
-### 8.1 Generate LR K-Space from HR K-Space
+**Generate LR k-space from HR k-space:**
 
 ```bash
 kst-preprocess \
@@ -168,7 +364,7 @@ kst-preprocess \
 	--save_summary_path ./runs/preprocess_summary.json
 ```
 
-### 8.2 Deterministic Train/Validation/Test Split
+**Deterministic train/validation/test split:**
 
 ```bash
 kst-split \
@@ -183,7 +379,7 @@ kst-split \
 	--save_summary_path ./runs/split_summary.json
 ```
 
-### 8.3 Train
+**Train (code defaults):**
 
 ```bash
 kst-train \
@@ -199,6 +395,22 @@ kst-train \
 	--pure_k_training_epoch 100
 ```
 
+**Train (research-matching schedule):**
+
+```bash
+kst-train \
+	--output_dir ./runs/research_repro \
+	--train_hr_data_path ./data/processed/splits/train_k.npy \
+	--train_lr_data_path ./data/processed/splits/train_lr_k.npy \
+	--train_mask_path ./data/masks/combined_masks.npy \
+	--valid_hr_data_path ./data/processed/splits/valid_k.npy \
+	--valid_lr_data_path ./data/processed/splits/valid_lr_k.npy \
+	--valid_mask_path ./data/masks/combined_masks.npy \
+	--epoch_num 310 \
+	--pure_lr_training_epoch 50 \
+	--pure_k_training_epoch 150
+```
+
 Primary artifacts under `--output_dir`:
 
 - `tensorboard/`
@@ -206,7 +418,7 @@ Primary artifacts under `--output_dir`:
 - `checkpoints/best_valid_psnr.pth`
 - `training_summary.json`
 
-### 8.4 Inference/Evaluation
+**Inference/evaluation:**
 
 ```bash
 kst-test \
@@ -218,7 +430,7 @@ kst-test \
 	--save_summary_path ./runs/exp01/inference_summary.json
 ```
 
-### 8.5 Parity Gate (Baseline vs Candidate)
+**Parity gate (baseline vs candidate):**
 
 ```bash
 kst-parity \
@@ -233,17 +445,14 @@ kst-parity \
 	--output_report ./runs/candidate/parity_report.json
 ```
 
-Exit status semantics:
+Exit status: `0` = pass, `1` = fail.
 
-- `0`: parity gate pass
-- `1`: parity gate fail
-
-## 9. Reproducibility and Validation
+### 8.4 Validation and Practical Notes
 
 - Deterministic seed configuration is enabled through runtime options.
 - Metric reporting includes PSNR and SSIM for training and evaluation.
 - Runtime summaries provide elapsed time and peak memory signals.
-- Test suite includes contracts, data modules, model forward behavior, engine integration, CLI smoke coverage, and parity validation.
+- Test suite covers contracts, data modules, model forward behavior, engine integration, CLI smoke coverage, and parity validation.
 
 Run tests:
 
@@ -251,17 +460,10 @@ Run tests:
 python -m pytest -q
 ```
 
-## 10. Incremental Modular Build Strategy
+**Notes for breast MRI experiments:**
 
-The repository is organized as modular research software. Data processing, model design, training control, inference, validation, and CLI orchestration are separated into dedicated modules. This structure supports:
-
-- rapid experimentation at subsystem boundaries,
-- unit and integration testing by module,
-- transparent benchmarking and parity checks,
-- easier adaptation to alternative breast MRI datasets and mask regimes.
-
-## 11. Notes for Breast MRI Experiments
-
-- Ensure mask banks are aligned with HR spatial resolution.
+- Ensure mask banks are aligned with HR spatial resolution (320×320).
 - Keep acquisition-specific preprocessing steps consistent across train/validation/test splits.
-- Use parity reports when introducing architectural or hyperparameter changes to preserve clinical-quality reconstruction behavior.
+- Use parity reports when introducing architectural or hyperparameter changes to preserve clinical quality reconstruction behavior.
+
+
