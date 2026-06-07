@@ -345,30 +345,37 @@ During the refinement stage, the model is trained exclusively using a composite 
 
 ### 5.4 Qualitative Results
 
-<p align="center">
-  <span style="display: inline-block; text-align: center; margin: 10px 10px 0 10px;">
-    <img src="Results/Reconstructed%20Images/Undersampled%20Image.jpg" width="175px" alt="Undersampled"><br>
-    (a)
-  </span>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <span style="display: inline-block; text-align: center; margin: 10px 10px 0 10px;">
-    <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28Without%20Image%20Domain%20Refinement%29.jpg" width="175px" alt="No refinement"><br>
-    (b)
-  </span>
-  <br>
-  <span style="display: inline-block; text-align: center; margin: 10px 10px 0 10px;">
-    <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28With%20Image%20Domain%20Refinement%29.png" width="175px" alt="With refinement"><br>
-    (c)
-  </span>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <span style="display: inline-block; text-align: center; margin: 10px 10px 0 10px;">
-    <img src="Results/Reconstructed%20Images/Ground%20Truth.jpg" width="175px" alt="Ground truth"><br>
-    (d)
-  </span>
-</p>
-<div align="center" style="padding: 0 0 40px 0;">
+<table align="center" border="0" style="border-collapse: collapse; text-align: center;">
+  <tr>
+    <td align="center" style="padding: 10px;">
+      <img src="Results/Reconstructed%20Images/Undersampled%20Image.jpg" width="175px" alt="Undersampled">
+    </td>
+    <td align="center" style="padding: 10px;">
+      <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28Without%20Image%20Domain%20Refinement%29.jpg" width="175px" alt="No refinement">
+    </td>
+  </tr>
+  <tr>
+    <td align="center">(a)</td>
+    <td align="center">(b)</td>
+  </tr>
+  <tr>
+    <td align="center" style="padding: 10px;">
+      <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28With%20Image%20Domain%20Refinement%29.png" width="175px" alt="With refinement">
+    </td>
+    <td align="center" style="padding: 10px;">
+      <img src="Results/Reconstructed%20Images/Ground%20Truth.jpg" width="175px" alt="Ground truth">
+    </td>
+  </tr>
+  <tr>
+    <td align="center">(c)</td>
+    <td align="center">(d)</td>
+  </tr>
+</table>
+<div align="center">
   <i>Figure 13. Qualitative reconstruction on a representative breast MRI slice at undersampled acquisition. (a) Coherent aliasing streaks obscure tissue structure. (b) Global anatomy restored; relatively soft edges, incomplete fine detail. (c) Sharper boundaries, reduced ringing, improved fibroglandular texture. (d) Fully sampled reference.</i>
 </div>
+
+#### &nbsp;
 
 ---
 
