@@ -94,17 +94,21 @@ In-repo tooling covers stages 2 and 4 via `kst-preprocess` and `kst-split`. Raw 
 <p align="center">
   <img src="Results/Preprocessing%20Pipeline%20Summary.jpg" alt="Deep learning vs compressed sensing acceleration ranges" width="40%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 2. End-to-end preprocessing pipeline: raw H5 → k_data.npy → LR_k_data.npy → combined_masks.npy → train/valid/test splits.</i>
 </div>
+
+#### &nbsp;
 
 <!-- ![LR k-space generation](Results/LR%20data%20generation.jpg) -->
 <p align="center">
   <img src="Results/LR%20data%20generation.jpg" alt="LR k-space generation" width="60%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 3. Low-resolution k-space generation: HR k-space → IFFT → 2× average pooling → FFT.</i>
 </div>
+
+#### &nbsp;
 
 | Array | Shape | Description |
 |-------|-------|-------------|
@@ -138,17 +142,21 @@ The `KSpaceTransformer` model ([`model/transformer.py`](model/transformer.py)) l
 <p align="center">
   <img src="Results/Encoder%20Architecture.jpg" alt="Encoder architecture" width="50%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 4. Encoder: MLP embedding + positional encoding → N× self-attention layers.</i>
 </div>
+
+#### &nbsp;
 
 <!-- ![Decoder architecture with image-domain refinement](Results/Decoder%20Architecture%20%28With%20Image%20Domain%20Refinement%29.jpg) -->
 <p align="center">
   <img src="Results/Decoder%20Architecture%20%28With%20Image%20Domain%20Refinement%29.jpg" alt="Decoder architecture with image-domain refinement" width="70%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 5. Hierarchical decoder: 1. LR decoder (cross+self-attention) 2. HR decoder (cross-attention + refinement module).</i>
 </div>
+
+#### &nbsp;
 
 | Parameter | Default |
 |-----------|---------|
@@ -186,9 +194,11 @@ A three-stage progressive training schedule ([`training/stage.py`](training/stag
 <p align="center">
   <img src="Results/LR%20Stage%20Loss%20Function.jpg" alt="LR stage loss function" width="50%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 6. LR stage: weighted dual-domain MSE over 4 decoder layers (8 terms).</i>
 </div>
+
+#### &nbsp;
 
 <!-- ![HR stage loss part 1](Results/Total%20loss%20in%20HR%20stage%20-%20part%201.jpg)
 ![HR stage loss part 2](Results/Total%20loss%20in%20HR%20stage%20-%20part%202.jpg) -->
@@ -196,17 +206,21 @@ A three-stage progressive training schedule ([`training/stage.py`](training/stag
   <img src="Results/Total%20loss%20in%20HR%20stage%20-%20part%201.jpg" alt="HR stage loss part 1" width="49%" />
   <img src="Results/Total%20loss%20in%20HR%20stage%20-%20part%202.jpg" alt="HR stage loss part 2" width="42%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 7. HR stage: LR terms + 6 HR layer dual-domain MSE (20 terms total).</i>
 </div>
+
+#### &nbsp;
 
 <!-- ![Refinement stage loss](Results/Refinement%20Stage%20Loss%20Function.jpg) -->
 <p align="center">
   <img src="Results/Refinement%20Stage%20Loss%20Function.jpg" alt="Refinement stage loss" width="35%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 8. Refinement stage composite loss: $\lambda_1 \mathcal{L}_{L1} + \lambda_2 \mathcal{L}_\text{Perceptual} + \lambda_3 \mathcal{L}_\text{SSIM}$.</i>
 </div>
+
+#### &nbsp;
 
 ---
 
@@ -286,17 +300,21 @@ Install the package with `pip install -e .` and run the test suite with `python 
 <p align="center">
   <img src="Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20PSNR.jpg" alt="PSNR performance comparison" width="50%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 9. PSNR comparison at ×10 acceleration.</i>
 </div>
+
+#### &nbsp;
 
 <!-- ![SSIM performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20SSIM.jpg) -->
 <p align="center">
   <img src="Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20SSIM.jpg" alt="SSIM performance comparison" width="65%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 10. SSIM comparison across ×3 to ×10 acceleration factors.</i>
 </div>
+
+#### &nbsp;
 
 ### 5.3 Training Dynamics
 
@@ -308,17 +326,21 @@ During the refinement stage, the model is trained exclusively using a composite 
 <p align="center">
   <img src="Results/dual_stage_mse_loss_curve.png" alt="Dual-stage MSE loss curve" width="70%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 11. LR + HR stage MSE loss (epochs 0–150). Spike at epoch 51 reflects 8→20 loss terms; final val MSE ≈ 0.023.</i>
 </div>
+
+#### &nbsp;
 
 <!-- ![Refinement stage composite loss](Results/refinement_stage_composite_loss_curve.png) -->
 <p align="center">
   <img src="Results/refinement_stage_composite_loss_curve.png" alt="Refinement stage composite loss" width="70%" />
 </p>
-<div align="center" style="padding: 0 0 40px 0;">
+<div align="center">
   <i>Figure 12. Refinement stage composite loss (epochs 150–310); final val ≈ 0.204.</i>
 </div>
+
+#### &nbsp;
 
 
 ### 5.4 Qualitative Results
