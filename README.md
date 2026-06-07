@@ -110,11 +110,32 @@ In-repo tooling covers stages 2 and 4 via `kst-preprocess` and `kst-split`. Raw 
 
 #### &nbsp;
 
-| Array | Shape | Description |
-|-------|-------|-------------|
-| HR k-space | `[N, 320, 320, 2]` | Fully sampled ground truth |
-| LR k-space | `[N, 160, 160, 2]` | Coarse supervision target |
-| Mask bank | `[60, 320, 320]` | Retrospective undersampling patterns |
+<table align="center" border="1" style="border-collapse: collapse; text-align: center; width: 100%; max-width: 800px;">
+  <thead>
+    <tr style="background-color: #f2f2f2;">
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Array</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Shape</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">HR k-space</td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>[N, 320, 320, 2]</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Fully sampled ground truth</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">LR k-space</td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>[N, 160, 160, 2]</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Coarse supervision target</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Mask bank</td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>[60, 320, 320]</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Retrospective undersampling patterns</td>
+    </tr>
+  </tbody>
+</table>
 
 Split outputs: `train_k.npy`, `valid_k.npy`, `test_k.npy`, corresponding `*_lr_k.npy` files, and `split_indices.npz`.
 
@@ -158,17 +179,52 @@ The `KSpaceTransformer` model ([`model/transformer.py`](model/transformer.py)) l
 
 #### &nbsp;
 
-| Parameter | Default |
-|-----------|---------|
-| `d_model` | 256 |
-| `n_head` | 4 |
-| Encoder / LR / HR layers | 4 / 4 / 6 |
-| `dim_feedforward` | 1024 |
-| `lr_size` | 64 |
-| `batch_size` | 4 |
-| `max_seq_len` | 8000 |
-| `lr` (AdamW) | 5e-4 |
-| Optimizer schedule | Cosine annealing |
+<table align="center" border="1" style="border-collapse: collapse; text-align: center; width: 100%; max-width: 600px;">
+  <thead>
+    <tr style="background-color: #f2f2f2;">
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Parameter</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Default</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;"><code>d_model</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">256</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;"><code>n_head</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">4</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Encoder / LR / HR layers</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">4 / 4 / 6</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;"><code>dim_feedforward</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">1024</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;"><code>lr_size</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">64</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;"><code>batch_size</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">4</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;"><code>max_seq_len</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">8000</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;"><code>lr</code> (AdamW)</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">5e-4</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Optimizer schedule</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">Cosine annealing</td>
+    </tr>
+  </tbody>
+</table>
 
 Defaults defined in [`config/schema.py`](config/schema.py).
 
@@ -176,11 +232,40 @@ Defaults defined in [`config/schema.py`](config/schema.py).
 
 A three-stage progressive training schedule ([`training/stage.py`](training/stage.py)) targets coarse-to-fine reconstruction:
 
-| Stage | Research Epochs | Code Defaults | Active Modules | Objective |
-|-------|----------------|---------------|----------------|-----------|
-| LR | 1–50 | 1–50 | Encoder + LR decoder | Coarse 160×160 structure |
-| HR | 51–150 | 51–100 | + HR decoder | Full 320×320 k-space |
-| RM | 151–310 | 101–200 | + CNN refinement | Spatial artifact removal |
+<table align="center" border="1" style="border-collapse: collapse; text-align: center; width: 100%; max-width: 800px;">
+  <thead>
+    <tr style="background-color: #f2f2f2;">
+      <th style="padding: 10px; border: 1px solid #ddd;">Stage</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Research Epochs</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Code Defaults</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Active Modules</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Objective</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">LR</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">1–50</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">1–50</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Encoder + LR decoder</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Coarse 160×160 structure</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">HR</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">51–150</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">51–100</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">+ HR decoder</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Full 320×320 k-space</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">RM</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">151–310</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">101–200</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">+ CNN refinement</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Spatial artifact removal</td>
+    </tr>
+  </tbody>
+</table>
 
 **Stage 1 (LR).** Encoder and LR decoder are supervised with 160×160 targets. HR decoder outputs are zeroed and remain untrained.
 
@@ -278,21 +363,91 @@ Install the package with `pip install -e .` and run the test suite with `python 
 
 **PSNR (dB):**
 
-| Method | ×3 | ×5 | ×7 | ×10 |
-|--------|-----|-----|-----|-----|
-| SwinMR | 31.51 | 30.36 | 29.21 | 27.48 |
-| OUCR (baseline) | 38.47 | 36.78 | 34.25 | 31.61 |
-| K-Space Transformer (no refinement) | 37.02 | 34.57 | 31.94 | 28.36 |
-| **K-Space Transformer (with refinement)** | **38.81** | **37.49** | **35.16** | **32.43** |
+<table align="center" border="1" style="border-collapse: collapse; text-align: center; width: 100%; max-width: 600px;">
+  <thead>
+    <tr style="background-color: #f2f2f2;">
+      <th style="padding: 10px; border: 1px solid #ddd;">Method</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">×3</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">×5</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">×7</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">×10</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">SwinMR</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">31.51</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">30.36</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">29.21</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">27.48</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">OUCR (baseline)</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">38.47</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">36.78</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">34.25</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">31.61</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">K-Space Transformer (no refinement)</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">37.02</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">34.57</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">31.94</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">28.36</td>
+    </tr>
+    <tr style="font-weight: bold;">
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">K-Space Transformer (with refinement)</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">38.81</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">37.49</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">35.16</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">32.43</td>
+    </tr>
+  </tbody>
+</table>
 
 **SSIM:**
 
-| Method | ×3 | ×5 | ×7 | ×10 |
-|--------|------|------|------|------|
-| SwinMR | 0.9520 | 0.9341 | 0.9162 | 0.8893 |
-| OUCR (baseline) | 0.9915 | 0.9797 | 0.9625 | 0.9442 |
-| K-Space Transformer (no refinement) | 0.9923 | 0.9801 | 0.9670 | 0.9492 |
-| **K-Space Transformer (with refinement)** | **0.9937** | **0.9820** | **0.9731** | **0.9594** |
+<table align="center" border="1" style="border-collapse: collapse; text-align: center; width: 100%; max-width: 600px;">
+  <thead>
+    <tr style="background-color: #f2f2f2;">
+      <th style="padding: 10px; border: 1px solid #ddd;">Method</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">×3</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">×5</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">×7</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">×10</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">SwinMR</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9520</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9341</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9162</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.8893</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">OUCR (baseline)</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9915</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9797</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9625</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9442</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">K-Space Transformer (no refinement)</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9923</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9801</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9670</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9492</td>
+    </tr>
+    <tr style="font-weight: bold;">
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">K-Space Transformer (with refinement)</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9937</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9820</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9731</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">0.9594</td>
+    </tr>
+  </tbody>
+</table>
 
 **Analysis.** Image-domain refinement provides increasing PSNR gains over the k-space-only model as acceleration increases: +1.79 dB (×3), +2.92 dB (×5), +3.22 dB (×7), and +4.07 dB (×10). SSIM gains follow the same trend (+0.0014 to +0.0102). The hybrid model with refinement beats OUCR on SSIM at all acceleration factors and on PSNR at ×3 (+0.34 dB), ×5 (+0.71 dB), and ×7 (+0.91 dB); at ×10, PSNR is 0.82 dB below OUCR while SSIM remains superior (0.9594 vs 0.9442). The k-space-only variant already exceeds OUCR on SSIM at all factors but lags on PSNR at high acceleration, confirming that refinement closes the spatial fidelity gap. Both variants substantially outperform SwinMR across all metrics and acceleration factors.
 
@@ -395,12 +550,37 @@ Full project report: [`Results/Project_Final_Report_Group32_draft.pdf`](Results/
 
 The reported results in Section 5 were produced with a research training configuration that differs from the codebase defaults in several aspects. Users reproducing or extending this work should be aware of these differences.
 
-| Aspect | Research (reported results) | Codebase default |
-|--------|----------------------------|------------------|
-| Total epochs | 310 | 200 |
-| Stage boundaries | LR 50 / HR 100 / RM 160 | LR 50 / K 50 / RM 100 |
-| CNN refinement depth | 5 conv layers | 4 conv + 1×1 output |
-| Mask generation | 60 masks, 6 types | Expects `combined_masks.npy` |
+<table align="center" border="1" style="border-collapse: collapse; text-align: center;">
+  <thead>
+    <tr style="background-color: #f2f2f2;">
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Aspect</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Research (reported results)</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Codebase default</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Total epochs</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">310</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">200</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Stage boundaries</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">LR 50 / HR 100 / RM 160</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">LR 50 / K 50 / RM 100</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">CNN refinement depth</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">5 conv layers</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">4 conv + 1×1 output</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Mask generation</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">60 masks, 6 types</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">Expects <code>combined_masks.npy</code></td>
+    </tr>
+  </tbody>
+</table>
 
 
 ---
