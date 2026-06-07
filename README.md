@@ -46,9 +46,13 @@ This research addresses this gap by implementing a K-Space Transformer framework
 
 The scope of this work is limited to T1-weighted fat-saturated breast MRI central slices from the Duke Breast MRI dataset, evaluated at acceleration factors ×3, ×5, ×7, and ×10 using Peak Signal-to-Noise Ratio (PSNR) and Structural Similarity Index (SSIM) metrics against OUCR and SwinMR baselines.
 
-![Deep learning vs compressed sensing acceleration ranges](Results/reconstruction%20methods%20and%20acceleration%20rates.jpg)
+<p align="center">
+  <img src="Results/reconstruction%20methods%20and%20acceleration%20rates.jpg" alt="Deep learning vs compressed sensing acceleration ranges" width="50%" />
+</p>
 
-*Figure 1. Reconstruction method families and typical acceleration ranges.*
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 1. Reconstruction method families and typical acceleration ranges.</i>
+</div>
 
 ---
 
@@ -86,13 +90,21 @@ This work contributes a breast-specific K-Space Transformer with hierarchical de
 
 In-repo tooling covers stages 2 and 4 via `kst-preprocess` and `kst-split`. Raw H5 extraction and mask generation are performed externally.
 
-![Preprocessing pipeline overview](Results/Preprocessing%20Pipeline%20Summary.jpg)
+<!-- ![Preprocessing pipeline overview](Results/Preprocessing%20Pipeline%20Summary.jpg) -->
+<p align="center">
+  <img src="Results/Preprocessing%20Pipeline%20Summary.jpg" alt="Deep learning vs compressed sensing acceleration ranges" width="40%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 2. End-to-end preprocessing pipeline: raw H5 → k_data.npy → LR_k_data.npy → combined_masks.npy → train/valid/test splits.</i>
+</div>
 
-*Figure 2. End-to-end preprocessing pipeline: raw H5 → k_data.npy → LR_k_data.npy → combined_masks.npy → train/valid/test splits.*
-
-![LR k-space generation](Results/LR%20data%20generation.jpg)
-
-*Figure 3. Low-resolution k-space generation: HR k-space → IFFT → 2× average pooling → FFT.*
+<!-- ![LR k-space generation](Results/LR%20data%20generation.jpg) -->
+<p align="center">
+  <img src="Results/LR%20data%20generation.jpg" alt="LR k-space generation" width="60%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 3. Low-resolution k-space generation: HR k-space → IFFT → 2× average pooling → FFT.</i>
+</div>
 
 | Array | Shape | Description |
 |-------|-------|-------------|
@@ -122,13 +134,21 @@ The `KSpaceTransformer` model ([`model/transformer.py`](model/transformer.py)) l
 
 **Image-Domain Refinement Module (RM stage).** Active only during the refinement training stage, this module receives HR decoder output, applies differentiable IFFT, processes through a CNN stack (LeakyReLU activations, 64 mid-channels, 3×3 kernels), and transforms back to k-space via FFT. Data consistency is enforced: $k_\text{out} = k_\text{rec} \odot m + k_\text{sampled}$, where $m$ is the undersampling mask. Refined output is fed back into the next HR layer via `conv_weight`-scaled embedding. Implementation: [`model/blocks.py`](model/blocks.py).
 
-![Encoder architecture](Results/Encoder%20Architecture.jpg)
+<!-- ![Encoder architecture](Results/Encoder%20Architecture.jpg) -->
+<p align="center">
+  <img src="Results/Encoder%20Architecture.jpg" alt="Encoder architecture" width="50%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 4. Encoder: MLP embedding + positional encoding → N× self-attention layers.</i>
+</div>
 
-*Figure 4. K-Space Transformer encoder: MLP embedding + positional encoding → N× self-attention layers.*
-
-![Decoder architecture with image-domain refinement](Results/Decoder%20Architecture%20%28With%20Image%20Domain%20Refinement%29.jpg)
-
-*Figure 5. Hierarchical decoder: 1. LR decoder (cross+self-attention) 2. HR decoder (cross-attention + refinement module).*
+<!-- ![Decoder architecture with image-domain refinement](Results/Decoder%20Architecture%20%28With%20Image%20Domain%20Refinement%29.jpg) -->
+<p align="center">
+  <img src="Results/Decoder%20Architecture%20%28With%20Image%20Domain%20Refinement%29.jpg" alt="Decoder architecture with image-domain refinement" width="70%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 5. Hierarchical decoder: 1. LR decoder (cross+self-attention) 2. HR decoder (cross-attention + refinement module).</i>
+</div>
 
 | Parameter | Default |
 |-----------|---------|
@@ -162,18 +182,31 @@ A three-stage progressive training schedule ([`training/stage.py`](training/stag
 
 **Dual-domain deep supervision.** The total loss aggregates weighted Mean Squared Error (MSE) across all active decoder layers in both k-space and image domains simultaneously, providing complementary supervision for frequency accuracy and spatial coherence.
 
-![LR stage loss](Results/LR%20Stage%20Loss%20Function.jpg)
+<!-- ![LR stage loss](Results/LR%20Stage%20Loss%20Function.jpg) -->
+<p align="center">
+  <img src="Results/LR%20Stage%20Loss%20Function.jpg" alt="LR stage loss function" width="50%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 6. LR stage: weighted dual-domain MSE over 4 decoder layers (8 terms).</i>
+</div>
 
-*Figure 6. LR stage: weighted dual-domain MSE over 4 decoder layers (8 terms).*
+<!-- ![HR stage loss part 1](Results/Total%20loss%20in%20HR%20stage%20-%20part%201.jpg)
+![HR stage loss part 2](Results/Total%20loss%20in%20HR%20stage%20-%20part%202.jpg) -->
+<p align="center">
+  <img src="Results/Total%20loss%20in%20HR%20stage%20-%20part%201.jpg" alt="HR stage loss part 1" width="49%" />
+  <img src="Results/Total%20loss%20in%20HR%20stage%20-%20part%202.jpg" alt="HR stage loss part 2" width="42%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 7. HR stage: LR terms + 6 HR layer dual-domain MSE (20 terms total).</i>
+</div>
 
-![HR stage loss part 1](Results/Total%20loss%20in%20HR%20stage%20-%20part%201.jpg)
-![HR stage loss part 2](Results/Total%20loss%20in%20HR%20stage%20-%20part%202.jpg)
-
-*Figure 7. HR stage: LR terms + 6 HR layer dual-domain MSE (20 terms total).*
-
-![Refinement stage loss](Results/Refinement%20Stage%20Loss%20Function.jpg)
-
-*Figure 8. Refinement stage composite loss: $\lambda_1 \mathcal{L}_{L1} + \lambda_2 \mathcal{L}_\text{Perceptual} + \lambda_3 \mathcal{L}_\text{SSIM}$.*
+<!-- ![Refinement stage loss](Results/Refinement%20Stage%20Loss%20Function.jpg) -->
+<p align="center">
+  <img src="Results/Refinement%20Stage%20Loss%20Function.jpg" alt="Refinement stage loss" width="35%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 8. Refinement stage composite loss: $\lambda_1 \mathcal{L}_{L1} + \lambda_2 \mathcal{L}_\text{Perceptual} + \lambda_3 \mathcal{L}_\text{SSIM}$.</i>
+</div>
 
 ---
 
@@ -249,13 +282,21 @@ Install the package with `pip install -e .` and run the test suite with `python 
 
 **Analysis.** Image-domain refinement provides increasing PSNR gains over the k-space-only model as acceleration increases: +1.79 dB (×3), +2.92 dB (×5), +3.22 dB (×7), and +4.07 dB (×10). SSIM gains follow the same trend (+0.0014 to +0.0102). The hybrid model with refinement beats OUCR on SSIM at all acceleration factors and on PSNR at ×3 (+0.34 dB), ×5 (+0.71 dB), and ×7 (+0.91 dB); at ×10, PSNR is 0.82 dB below OUCR while SSIM remains superior (0.9594 vs 0.9442). The k-space-only variant already exceeds OUCR on SSIM at all factors but lags on PSNR at high acceleration, confirming that refinement closes the spatial fidelity gap. Both variants substantially outperform SwinMR across all metrics and acceleration factors.
 
-![PSNR performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20PSNR.jpg)
+<!-- ![PSNR performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20PSNR.jpg) -->
+<p align="center">
+  <img src="Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20PSNR.jpg" alt="PSNR performance comparison" width="50%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 9. PSNR comparison at ×10 acceleration.</i>
+</div>
 
-*Figure 9. PSNR comparison at ×10 acceleration.*
-
-![SSIM performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20SSIM.jpg)
-
-*Figure 10. SSIM comparison across ×3 to ×10 acceleration factors.*
+<!-- ![SSIM performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20SSIM.jpg) -->
+<p align="center">
+  <img src="Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20SSIM.jpg" alt="SSIM performance comparison" width="65%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 10. SSIM comparison across ×3 to ×10 acceleration factors.</i>
+</div>
 
 ### 5.3 Training Dynamics
 
@@ -263,23 +304,49 @@ During the LR stage (epochs 1–50), MSE loss declines steadily for both trainin
 
 During the refinement stage, the model is trained exclusively using a composite loss function (L1 + Perceptual + SSIM). Initial loss values for this stage begin at approximately 0.8 for training and 0.85 for validation. Over the course of the 160 epochs, both metrics exhibit a steady decline, ultimately converging to approximately 0.156 (train) and 0.204 (validation) by epoch 310. This optimization trajectory demonstrates successful learning of spatial artifact suppression while effectively preserving k-space consistency.
 
-![Dual-stage MSE loss curve](Results/dual_stage_mse_loss_curve.png)
+<!-- ![Dual-stage MSE loss curve](Results/dual_stage_mse_loss_curve.png) -->
+<p align="center">
+  <img src="Results/dual_stage_mse_loss_curve.png" alt="Dual-stage MSE loss curve" width="70%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 11. LR + HR stage MSE loss (epochs 0–150). Spike at epoch 51 reflects 8→20 loss terms; final val MSE ≈ 0.023.</i>
+</div>
 
-*Figure 11. LR + HR stage MSE loss (epochs 0–150). Spike at epoch 51 reflects 8→20 loss terms; final val MSE ≈ 0.023.*
+<!-- ![Refinement stage composite loss](Results/refinement_stage_composite_loss_curve.png) -->
+<p align="center">
+  <img src="Results/refinement_stage_composite_loss_curve.png" alt="Refinement stage composite loss" width="70%" />
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 12. Refinement stage composite loss (epochs 150–310); final val ≈ 0.204.</i>
+</div>
 
-![Refinement stage composite loss](Results/refinement_stage_composite_loss_curve.png)
-
-*Figure 12. Refinement stage composite loss (epochs 150–310); final val ≈ 0.204.*
 
 ### 5.4 Qualitative Results
 
-| (a) Undersampled input | (b) K-space Transformer (no refinement) |
-|:---:|:---:|
-| <img src="Results/Reconstructed%20Images/Undersampled%20Image.jpg" width="250px" alt="Undersampled"> | <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28Without%20Image%20Domain%20Refinement%29.jpg" width="250px" alt="No refinement"> |
-| **(c) With image-domain refinement** | **(d) Ground truth** |
-| <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28With%20Image%20Domain%20Refinement%29.png" width="250px" alt="With refinement"> | <img src="Results/Reconstructed%20Images/Ground%20Truth.jpg" width="250px" alt="Ground truth"> |
-
-*Figure 13. Qualitative reconstruction on a representative breast MRI slice at undersampled acquisition. (a) Coherent aliasing streaks obscure tissue structure. (b) Global anatomy restored; relatively soft edges, incomplete fine detail. (c) Sharper boundaries, reduced ringing, improved fibroglandular texture. (d) Fully sampled reference.*
+<p align="center">
+  <span style="display: inline-block; text-align: center; margin: 10px 10px 0 10px;">
+    <img src="Results/Reconstructed%20Images/Undersampled%20Image.jpg" width="175px" alt="Undersampled"><br>
+    (a)
+  </span>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <span style="display: inline-block; text-align: center; margin: 10px 10px 0 10px;">
+    <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28Without%20Image%20Domain%20Refinement%29.jpg" width="175px" alt="No refinement"><br>
+    (b)
+  </span>
+  <br>
+  <span style="display: inline-block; text-align: center; margin: 10px 10px 0 10px;">
+    <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28With%20Image%20Domain%20Refinement%29.png" width="175px" alt="With refinement"><br>
+    (c)
+  </span>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <span style="display: inline-block; text-align: center; margin: 10px 10px 0 10px;">
+    <img src="Results/Reconstructed%20Images/Ground%20Truth.jpg" width="175px" alt="Ground truth"><br>
+    (d)
+  </span>
+</p>
+<div align="center" style="padding: 0 0 20px 0;">
+  <i>Figure 13. Qualitative reconstruction on a representative breast MRI slice at undersampled acquisition. (a) Coherent aliasing streaks obscure tissue structure. (b) Global anatomy restored; relatively soft edges, incomplete fine detail. (c) Sharper boundaries, reduced ringing, improved fibroglandular texture. (d) Fully sampled reference.</i>
+</div>
 
 ---
 
