@@ -4,7 +4,7 @@ from typing import Any
 
 import torch
 
-from training.metrics import MetricsAccumulator, compute_psnr, compute_ssim
+from training.metrics import MetricsAccumulator, compute_nmse, compute_psnr, compute_ssim
 from training.stage import TrainingStage
 from utils.device import to_device
 
@@ -69,13 +69,16 @@ class InferenceRunner:
 
                 psnr_sum = compute_psnr(prediction.detach(), target.detach())
                 ssim_sum = compute_ssim(prediction.detach(), target.detach())
+                nmse_sum = compute_nmse(prediction.detach(), target.detach())
                 acc.update("psnr", float(psnr_sum), n=batch_size)
                 acc.update("ssim", float(ssim_sum), n=batch_size)
+                acc.update("nmse", float(nmse_sum), n=batch_size)
 
         return {
             "stage": stage.value,
             "mean_psnr": acc.mean("psnr"),
             "mean_ssim": acc.mean("ssim"),
+            "mean_nmse": acc.mean("nmse"),
             "num_samples": acc.counts.get("psnr", 0),
         }
 

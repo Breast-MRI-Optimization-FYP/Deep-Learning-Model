@@ -8,6 +8,7 @@ from typing import Any
 class ParityThresholds:
     psnr_drift_db: float = 0.05
     ssim_drift: float = 0.001
+    nmse_drift_ratio: float = 0.05
     runtime_drift_ratio: float = 0.05
     memory_drift_ratio: float = 0.10
 
@@ -121,15 +122,27 @@ def _extract_train_metrics(summary: dict[str, Any]) -> dict[str, float | None]:
     return {
         "psnr": _to_float(summary.get("best_valid_psnr")),
         "ssim": _to_float(summary.get("best_valid_ssim")),
+        "nmse": _to_float(summary.get("best_valid_nmse")),
         "runtime_seconds": _to_float(summary.get("runtime_seconds")),
         "peak_memory_bytes": _to_float(summary.get("peak_memory_bytes")),
     }
 
 
 def _extract_inference_metrics(summary: dict[str, Any]) -> dict[str, float | None]:
+    overall = summary.get("overall", {})
+    preferred = overall.get("RM", overall.get("K", {})) if isinstance(overall, dict) else {}
+
+    def _summary_metric(name: str) -> float | None:
+        direct = _to_float(summary.get(f"mean_{name}"))
+        if direct is not None:
+            return direct
+        metric_payload = preferred.get(name, {}) if isinstance(preferred, dict) else {}
+        return _to_float(metric_payload.get("mean")) if isinstance(metric_payload, dict) else None
+
     return {
-        "psnr": _to_float(summary.get("mean_psnr")),
-        "ssim": _to_float(summary.get("mean_ssim")),
+        "psnr": _summary_metric("psnr"),
+        "ssim": _summary_metric("ssim"),
+        "nmse": _summary_metric("nmse"),
         "runtime_seconds": _to_float(summary.get("runtime_seconds")),
         "peak_memory_bytes": _to_float(summary.get("peak_memory_bytes")),
     }
@@ -154,6 +167,13 @@ def compare_phase(
             baseline_metrics.get("ssim"),
             candidate_metrics.get("ssim"),
             thresholds.ssim_drift,
+        ),
+        _relative_upper_bound_check(
+            "nmse",
+            baseline_metrics.get("nmse"),
+            candidate_metrics.get("nmse"),
+            thresholds.nmse_drift_ratio,
+            allow_missing=True,
         ),
         _relative_upper_bound_check(
             "runtime_seconds",

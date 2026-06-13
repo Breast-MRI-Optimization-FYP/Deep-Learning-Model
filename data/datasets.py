@@ -271,5 +271,14 @@ class KSpaceCollator:
         if all("LR_k_gt" in item for item in batch):
             result["LR_k_gt"] = torch.stack([item["LR_k_gt"] for item in batch])
 
+        for optional_scalar in (
+            "sample_index",
+            "mask_id",
+            "acceleration",
+            "actual_acceleration",
+        ):
+            if all(optional_scalar in item for item in batch):
+                result[optional_scalar] = torch.stack([item[optional_scalar] for item in batch])
+
         return result
 

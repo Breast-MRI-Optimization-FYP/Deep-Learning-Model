@@ -25,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--psnr_drift_db", type=float, default=0.05)
     parser.add_argument("--ssim_drift", type=float, default=0.001)
+    parser.add_argument("--nmse_drift_ratio", type=float, default=0.05)
     parser.add_argument("--runtime_drift_ratio", type=float, default=0.05)
     parser.add_argument("--memory_drift_ratio", type=float, default=0.10)
 
@@ -88,6 +89,7 @@ def main_parity(argv: list[str] | None = None) -> int:
     thresholds = ParityThresholds(
         psnr_drift_db=float(args.psnr_drift_db),
         ssim_drift=float(args.ssim_drift),
+        nmse_drift_ratio=float(args.nmse_drift_ratio),
         runtime_drift_ratio=float(args.runtime_drift_ratio),
         memory_drift_ratio=float(args.memory_drift_ratio),
     )

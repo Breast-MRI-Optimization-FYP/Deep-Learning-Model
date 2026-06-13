@@ -283,6 +283,76 @@ def main_train(argv: Sequence[str] | None = None) -> int:
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     run_logger.info(f"Training summary saved to {summary_path}")
 
+    if bool(getattr(args, "evaluate_after_training", False)):
+        evaluation_hr = getattr(args, "evaluation_test_hr_data_path", None)
+        evaluation_mask = getattr(args, "evaluation_test_mask_path", None)
+        if not evaluation_hr or not evaluation_mask:
+            raise ValueError(
+                "--evaluate_after_training requires --evaluation_test_hr_data_path "
+                "and --evaluation_test_mask_path"
+            )
+
+        from cli.evaluate import main_evaluate
+
+        best_checkpoint = output_dir / "checkpoints" / "best_valid_psnr.pth"
+        if not best_checkpoint.exists():
+            best_checkpoint = output_dir / "checkpoints" / "last.pth"
+
+        evaluation_args = [
+            "--output_dir",
+            str(output_dir),
+            "--checkpoint",
+            str(best_checkpoint),
+            "--test_hr_data_path",
+            str(evaluation_hr),
+            "--test_mask_path",
+            str(evaluation_mask),
+            "--batch_size",
+            str(config.data.valid_batch_size),
+            "--lr_size",
+            str(config.data.lr_size),
+            "--max_seq_len",
+            str(config.data.max_seq_len),
+            "--d_model",
+            str(config.model.d_model),
+            "--n_head",
+            str(config.model.n_head),
+            "--num_encoder_layers",
+            str(config.model.num_encoder_layers),
+            "--num_LRdecoder_layers",
+            str(config.model.num_lrdecoder_layers),
+            "--num_HRdecoder_layers",
+            str(config.model.num_hrdecoder_layers),
+            "--dim_feedforward",
+            str(config.model.dim_feedforward),
+            "--hr_conv_channel",
+            str(config.model.hr_conv_channel),
+            "--hr_conv_num",
+            str(config.model.hr_conv_num),
+            "--hr_kernel_size",
+            str(config.model.hr_kernel_size),
+            "--dropout",
+            str(config.train.dropout),
+            "--conv_weight",
+            str(config.train.conv_weight),
+            "--gpu",
+            str(config.runtime.gpu),
+            "--seed",
+            str(config.runtime.seed),
+            "--qualitative_samples_per_acceleration",
+            str(getattr(args, "evaluation_qualitative_samples", 1)),
+        ]
+        manifest = getattr(args, "evaluation_mask_manifest", None)
+        if manifest:
+            evaluation_args.extend(["--mask_manifest", str(manifest)])
+        acceleration_factors = getattr(args, "evaluation_acceleration_factors", [])
+        if acceleration_factors:
+            evaluation_args.append("--acceleration_factors")
+            evaluation_args.extend(str(value) for value in acceleration_factors)
+
+        run_logger.info(f"Running final evaluation with checkpoint {best_checkpoint}")
+        main_evaluate(evaluation_args)
+
     return 0
 
 
