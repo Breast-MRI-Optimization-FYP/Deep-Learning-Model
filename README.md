@@ -627,7 +627,7 @@ python -m pip install -e ".[dev]"
 
 ### 8.3 Command Line Workflows
 
-Entrypoints: `kst-preprocess`, `kst-split`, `kst-train`, `kst-test`, `kst-parity`
+Entrypoints: `kst-preprocess`, `kst-split`, `kst-train`, `kst-test`, `kst-evaluate`, `kst-parity`
 
 **Generate LR k-space from HR k-space:**
 
@@ -705,6 +705,23 @@ kst-test \
 	--inference_stage RM \
 	--save_summary_path ./runs/exp01/inference_summary.json
 ```
+
+**Comprehensive evaluation by acceleration factor:**
+
+```bash
+kst-evaluate \
+	--output_dir ./runs/exp01 \
+	--checkpoint ./runs/exp01/checkpoints/best_valid_psnr.pth \
+	--test_hr_data_path ./data/processed/splits/test_k.npy \
+	--test_mask_path ./data/masks/combined_masks.npy \
+	--mask_manifest ./data/masks/mask_manifest.json \
+	--acceleration_factors 3 5 7 10 \
+	--evaluation_stages K RM
+```
+
+This writes per-sample PSNR, SSIM, and NMSE; grouped statistics by acceleration;
+K-to-RM improvement tables; metric plots; and consistently normalized qualitative comparisons
+under `output_dir/evaluation/`.
 
 **Parity gate (baseline vs candidate):**
 

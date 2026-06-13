@@ -4,6 +4,7 @@ import numpy as np
 
 from training.metrics import (
     MetricsAccumulator,
+    compute_nmse,
     compute_psnr,
     compute_ssim,
 )
@@ -33,6 +34,11 @@ def test_ssim_handles_zero_data_range() -> None:
 
     assert compute_ssim(pred_same, gt) == 2.0
     assert compute_ssim(pred_diff, gt) == 0.0
+
+
+def test_nmse_is_zero_for_identical_batches() -> None:
+    gt = np.ones((2, 8, 8, 2), dtype=np.float32)
+    assert compute_nmse(gt, gt) == 0.0
 
 
 def test_metrics_accumulator_mean_tracking() -> None:

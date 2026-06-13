@@ -80,4 +80,6 @@ def test_inference_runner_for_k_and_rm_stages() -> None:
     assert summary_rm["num_samples"] == 4
     assert torch.isfinite(torch.tensor(float(summary_k["mean_ssim"])))
     assert torch.isfinite(torch.tensor(float(summary_rm["mean_ssim"])))
+    assert torch.isfinite(torch.tensor(float(summary_k["mean_nmse"])))
+    assert torch.isfinite(torch.tensor(float(summary_rm["mean_nmse"])))
 

@@ -95,6 +95,12 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--valid_hr_data_path", type=str, default=None)
     parser.add_argument("--valid_lr_data_path", type=str, default=None)
     parser.add_argument("--valid_mask_path", type=str, default=None)
+    parser.add_argument("--evaluate_after_training", type=str2bool, default=False)
+    parser.add_argument("--evaluation_test_hr_data_path", type=str, default=None)
+    parser.add_argument("--evaluation_test_mask_path", type=str, default=None)
+    parser.add_argument("--evaluation_mask_manifest", type=str, default=None)
+    parser.add_argument("--evaluation_acceleration_factors", nargs="*", type=float, default=[])
+    parser.add_argument("--evaluation_qualitative_samples", type=int, default=1)
 
 
 def add_test_args(parser: argparse.ArgumentParser) -> None:
@@ -104,6 +110,8 @@ def add_test_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--batch_size", type=int, default=defaults.data.valid_batch_size)
     parser.add_argument("--lr_size", type=int, default=defaults.data.lr_size)
     parser.add_argument("--max_seq_len", type=int, default=defaults.data.max_seq_len)
+    parser.add_argument("--dropout", type=float, default=defaults.train.dropout)
+    parser.add_argument("--conv_weight", type=float, default=defaults.train.conv_weight)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--inference_stage", choices=["LR", "K", "RM"], default="RM")
     parser.add_argument("--up_scale", type=int, default=2)

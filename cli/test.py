@@ -133,6 +133,7 @@ def main_test(argv: Sequence[str] | None = None) -> int:
         "stage": summary["stage"],
         "mean_psnr": summary["mean_psnr"],
         "mean_ssim": summary["mean_ssim"],
+        "mean_nmse": summary["mean_nmse"],
         "num_samples": summary["num_samples"],
         "runtime_seconds": runtime_tracker.elapsed_seconds(),
         "peak_memory_bytes": runtime_tracker.peak_memory_bytes(),
@@ -149,7 +150,8 @@ def main_test(argv: Sequence[str] | None = None) -> int:
     run_logger.info(f"Inference summary saved to {summary_path}")
     run_logger.info(
         f"stage={summary_payload['stage']} mean_psnr={summary_payload['mean_psnr']:.4f} "
-        f"mean_ssim={summary_payload['mean_ssim']:.6f} samples={summary_payload['num_samples']}"
+        f"mean_ssim={summary_payload['mean_ssim']:.6f} "
+        f"mean_nmse={summary_payload['mean_nmse']:.8f} samples={summary_payload['num_samples']}"
     )
     return 0
 
