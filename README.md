@@ -274,7 +274,7 @@ A three-stage progressive training schedule ([`training/stage.py`](training/stag
 **Stage 3 (RM).** Refinement module is supervised with high resolution image-domain targets. All components remain active so global frequency recovery and local spatial correction stay aligned.
 
 **Dual-domain deep supervision.** The total loss aggregates weighted Mean Squared Error (MSE) across all active decoder layers in both k-space and image domains simultaneously, providing complementary supervision for frequency accuracy and spatial coherence.
-
+<!-- 
 <p align="center">
   <img src="Results/LossFunctions_LR.png" alt="LR stage loss function" width="30%" />
 </p>
@@ -299,6 +299,28 @@ A three-stage progressive training schedule ([`training/stage.py`](training/stag
 <div align="center">
   <i>Figure 8. Refinement stage composite loss: $\lambda_1 \mathcal{L}_{L1} + \lambda_2 \mathcal{L}_\text{Perceptual} + \lambda_3 \mathcal{L}_\text{SSIM}$.</i>
 </div>
+
+#### &nbsp; -->
+
+<table align="center" border="0" cellpadding="10" cellspacing="0" style="border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td align="center" valign="top" width="33%" style="border: none;">
+      <img src="Results/LossFunctions_LR.png" alt="LR stage loss function" style="width: 100%;" />
+      <br/><br/>
+      <i>Figure 6. LR stage: weighted dual-domain MSE over 4 decoder layers (8 terms).</i>
+    </td>
+    <td align="center" valign="top" width="33%" style="border: none;">
+      <img src="Results/LossFunctions_HR.png" alt="HR stage loss part 1" style="width: 100%;" />
+      <br/><br/>
+      <i>Figure 7. HR stage: LR terms + 6 HR layer dual-domain MSE (20 terms total).</i>
+    </td>
+    <td align="center" valign="top" width="33%" style="border: none;">
+      <img src="Results/LossFunctions_Refinement.png" alt="Refinement stage loss" style="width: 100%;" />
+      <br/><br/>
+      <i>Figure 8. Refinement stage composite loss: $\lambda_1 \mathcal{L}_{L1} + \lambda_2 \mathcal{L}_\text{Perceptual} + \lambda_3 \mathcal{L}_\text{SSIM}$.</i>
+    </td>
+  </tr>
+</table>
 
 #### &nbsp;
 
@@ -369,7 +391,7 @@ Install the package with `pip install -e .` and run the test suite with `python 
 
 #### &nbsp;
 
-**PSNR (dB):**
+**Peak Signal-to-Noise Ratio (PSNR):**
 
 <table align="center" border="1" style="border-collapse: collapse; text-align: center; width: 100%; max-width: 600px;">
   <thead>
@@ -422,7 +444,7 @@ Install the package with `pip install -e .` and run the test suite with `python 
 
 #### &nbsp;
 
-**SSIM:**
+**Structural Similarity Index (SSIM):**
 
 <table align="center" border="1" style="border-collapse: collapse; text-align: center; width: 100%; max-width: 600px;">
   <thead>
@@ -501,40 +523,6 @@ During the refinement stage, the model is trained exclusively using a composite 
 
 #### &nbsp;
 
-
-<!-- ### 5.4 Qualitative Results
-
-<table align="center" border="0" style="border-collapse: collapse; text-align: center;">
-  <tr>
-    <td align="center" style="padding: 10px;">
-      <img src="Results/Reconstructed%20Images/Undersampled%20Image.jpg" width="175px" alt="Undersampled">
-    </td>
-    <td align="center" style="padding: 10px;">
-      <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28Without%20Image%20Domain%20Refinement%29.jpg" width="175px" alt="No refinement">
-    </td>
-  </tr>
-  <tr>
-    <td align="center">(a)</td>
-    <td align="center">(b)</td>
-  </tr>
-  <tr>
-    <td align="center" style="padding: 10px;">
-      <img src="Results/Reconstructed%20Images/Reconstructed%20Output%20%28With%20Image%20Domain%20Refinement%29.png" width="175px" alt="With refinement">
-    </td>
-    <td align="center" style="padding: 10px;">
-      <img src="Results/Reconstructed%20Images/Ground%20Truth.jpg" width="175px" alt="Ground truth">
-    </td>
-  </tr>
-  <tr>
-    <td align="center">(c)</td>
-    <td align="center">(d)</td>
-  </tr>
-</table>
-<div align="center">
-  <i>Figure 13. Qualitative reconstruction on a representative breast MRI slice at undersampled acquisition. (a) Coherent aliasing streaks obscure tissue structure. (b) Global anatomy restored; relatively soft edges, incomplete fine detail. (c) Sharper boundaries, reduced ringing, improved fibroglandular texture. (d) Fully sampled reference.</i>
-</div>
-
-#### &nbsp; -->
 
 ## 5.4 Qualitative Results
 
