@@ -275,8 +275,9 @@ A three-stage progressive training schedule ([`training/stage.py`](training/stag
 
 **Dual-domain deep supervision.** The total loss aggregates weighted Mean Squared Error (MSE) across all active decoder layers in both k-space and image domains simultaneously, providing complementary supervision for frequency accuracy and spatial coherence.
 
+<!-- ![LR stage loss](Results/LR%20Stage%20Loss%20Function.jpg) -->
 <p align="center">
-  <img src="Results/LossFunctions_LR.png" alt="LR stage loss function" width="30%" />
+  <img src="Results/LR%20Stage%20Loss%20Function.jpg" alt="LR stage loss function" width="50%" />
 </p>
 <div align="center">
   <i>Figure 6. LR stage: weighted dual-domain MSE over 4 decoder layers (8 terms).</i>
@@ -284,8 +285,11 @@ A three-stage progressive training schedule ([`training/stage.py`](training/stag
 
 #### &nbsp;
 
+<!-- ![HR stage loss part 1](Results/Total%20loss%20in%20HR%20stage%20-%20part%201.jpg)
+![HR stage loss part 2](Results/Total%20loss%20in%20HR%20stage%20-%20part%202.jpg) -->
 <p align="center">
-  <img src="Results/LossFunctions_HR.png" alt="HR stage loss part 1" width="30%" />
+  <img src="Results/Total%20loss%20in%20HR%20stage%20-%20part%201.jpg" alt="HR stage loss part 1" width="49%" />
+  <img src="Results/Total%20loss%20in%20HR%20stage%20-%20part%202.jpg" alt="HR stage loss part 2" width="42%" />
 </p>
 <div align="center">
   <i>Figure 7. HR stage: LR terms + 6 HR layer dual-domain MSE (20 terms total).</i>
@@ -293,8 +297,9 @@ A three-stage progressive training schedule ([`training/stage.py`](training/stag
 
 #### &nbsp;
 
+<!-- ![Refinement stage loss](Results/Refinement%20Stage%20Loss%20Function.jpg) -->
 <p align="center">
-  <img src="Results/LossFunctions_Refinement.png" alt="Refinement stage loss" width="30%" />
+  <img src="Results/Refinement%20Stage%20Loss%20Function.jpg" alt="Refinement stage loss" width="35%" />
 </p>
 <div align="center">
   <i>Figure 8. Refinement stage composite loss: $\lambda_1 \mathcal{L}_{L1} + \lambda_2 \mathcal{L}_\text{Perceptual} + \lambda_3 \mathcal{L}_\text{SSIM}$.</i>
@@ -354,20 +359,7 @@ Install the package with `pip install -e .` and run the test suite with `python 
 
 **Best model inference.** Reported results for the full hybrid model use the refinement stage `RM` (refinement module active).
 
-## 5.2 Quantitative Results
-
-**Baselines and Metrics.** SwinMR and OUCR (Over/Under complete Convolutional RNN) serve as the primary baselines. The performance of the K-Space Transformer is evaluated using Peak Signal-to-Noise Ratio (PSNR, dB), Structural Similarity Index (SSIM), and Normalized Mean Squared Error (NMSE).
-
-**Analysis.** The NMSE comparison (Figure 9) indicates that SwinMR exhibits significantly higher error across all acceleration factors compared to the transformer-based variants, while the baseline OUCR and the hybrid K-Space Transformer (with refinement) perform the best. Image-domain refinement provides increasing PSNR gains over the k-space-only model as acceleration increases: +1.79 dB (×3), +2.92 dB (×5), +3.22 dB (×7), and +4.07 dB (×10). SSIM gains follow the same trend (+0.0014 to +0.0102). The hybrid model with refinement beats OUCR on SSIM at all acceleration factors and on PSNR at ×3 (+0.34 dB), ×5 (+0.71 dB), and ×7 (+0.91 dB); at ×10, PSNR is 0.82 dB below OUCR while SSIM remains superior (0.9594 vs 0.9442). Both transformer variants substantially outperform SwinMR across all metrics and acceleration factors.
-
-<p align="center">
-  <img src="Results/NMSE_performance.png" alt="NMSE performance comparison" width="60%" />
-</p>
-<div align="center">
-  <i>Figure 9. NMSE comparison across ×3 to ×10 acceleration factors. Lower is better.</i>
-</div>
-
-#### &nbsp;
+### 5.2 Quantitative Results
 
 **PSNR (dB):**
 
@@ -413,15 +405,6 @@ Install the package with `pip install -e .` and run the test suite with `python 
   </tbody>
 </table>
 
-<p align="center">
-  <img src="Results/PSNR_performance.png" alt="PSNR performance comparison chart" width="60%" />
-</p>
-<div align="center">
-  <i>Figure 10. PSNR comparison across ×3 to ×10 acceleration factors. Higher is better.</i>
-</div>
-
-#### &nbsp;
-
 **SSIM:**
 
 <table align="center" border="1" style="border-collapse: collapse; text-align: center; width: 100%; max-width: 600px;">
@@ -466,11 +449,24 @@ Install the package with `pip install -e .` and run the test suite with `python 
   </tbody>
 </table>
 
+**Analysis.** Image-domain refinement provides increasing PSNR gains over the k-space-only model as acceleration increases: +1.79 dB (×3), +2.92 dB (×5), +3.22 dB (×7), and +4.07 dB (×10). SSIM gains follow the same trend (+0.0014 to +0.0102). The hybrid model with refinement beats OUCR on SSIM at all acceleration factors and on PSNR at ×3 (+0.34 dB), ×5 (+0.71 dB), and ×7 (+0.91 dB); at ×10, PSNR is 0.82 dB below OUCR while SSIM remains superior (0.9594 vs 0.9442). The k-space-only variant already exceeds OUCR on SSIM at all factors but lags on PSNR at high acceleration, confirming that refinement closes the spatial fidelity gap. Both variants substantially outperform SwinMR across all metrics and acceleration factors.
+
+<!-- ![PSNR performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20PSNR.jpg) -->
 <p align="center">
-  <img src="Results/SSIM_performance.png" alt="SSIM performance comparison chart" width="60%" />
+  <img src="Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20PSNR.jpg" alt="PSNR performance comparison" width="50%" />
 </p>
 <div align="center">
-  <i>Figure 11. SSIM comparison across ×3 to ×10 acceleration factors. Higher is better.</i>
+  <i>Figure 9. PSNR comparison at ×10 acceleration.</i>
+</div>
+
+#### &nbsp;
+
+<!-- ![SSIM performance comparison](Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20SSIM.jpg) -->
+<p align="center">
+  <img src="Results/MRI%20Reconstruction%20Performance%20Comparison%20Image%20-%20SSIM.jpg" alt="SSIM performance comparison" width="65%" />
+</p>
+<div align="center">
+  <i>Figure 10. SSIM comparison across ×3 to ×10 acceleration factors.</i>
 </div>
 
 #### &nbsp;
@@ -502,7 +498,7 @@ During the refinement stage, the model is trained exclusively using a composite 
 #### &nbsp;
 
 
-<!-- ### 5.4 Qualitative Results
+### 5.4 Qualitative Results
 
 <table align="center" border="0" style="border-collapse: collapse; text-align: center;">
   <tr>
@@ -534,16 +530,7 @@ During the refinement stage, the model is trained exclusively using a composite 
   <i>Figure 13. Qualitative reconstruction on a representative breast MRI slice at undersampled acquisition. (a) Coherent aliasing streaks obscure tissue structure. (b) Global anatomy restored; relatively soft edges, incomplete fine detail. (c) Sharper boundaries, reduced ringing, improved fibroglandular texture. (d) Fully sampled reference.</i>
 </div>
 
-#### &nbsp; -->
-
-## 5.4 Qualitative Results
-
-<p align="center">
-  <img src="Results/Qualitative_Comparison.png" alt="Comprehensive qualitative comparison of reconstruction methods across multiple cases" width="75%" />
-</p>
-<div align="center">
-  <i>Figure 14. Qualitative reconstruction on representative breast MRI slices at various retrospective undersampling acquisition patterns. Left-to-right columns show: Ground Truth fully sampled reference; Undersampled Input showing coherent aliasing streaks and obscured tissue structure; Reconstruction Output (Without Image Domain Refinement) showing restored anatomy but softer edges and residual low-frequency artifacts; and Reconstruction Output (With Image Domain Refinement) showing sharp boundaries, reduced ringing, and restored fibroglandular texture. The hybrid model effectively removes pervasive undersampling artifacts while preserving critical diagnostic details.</i>
-</div>
+#### &nbsp;
 
 ---
 
